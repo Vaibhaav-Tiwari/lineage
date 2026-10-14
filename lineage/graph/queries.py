@@ -49,3 +49,12 @@ SET d.kind = r.kind, d.source_url = r.source_url,
     d.at = CASE WHEN r.at IS NULL THEN null ELSE date(r.at) END
 MERGE (d)-[:DECIDES]->(p)
 """
+
+# --- Ingest: people (after identity resolution) ---------------------------
+
+# Write each resolved person's name and handles; aliases is a list of strings.
+UPSERT_PEOPLE = """
+UNWIND $rows AS r
+MERGE (p:Person {id: r.id})
+SET p.name = coalesce(r.name, p.name), p.github = r.github, p.discourse = r.discourse, p.aliases = r.aliases
+"""
