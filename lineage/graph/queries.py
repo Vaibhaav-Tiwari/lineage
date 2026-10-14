@@ -58,3 +58,31 @@ UNWIND $rows AS r
 MERGE (p:Person {id: r.id})
 SET p.name = coalesce(r.name, p.name), p.github = r.github, p.discourse = r.discourse, p.aliases = r.aliases
 """
+
+# --- Ingest: PEP text --------------------------------------------------------
+
+# One Chunk per section piece, with its embedding stored as a vecf32 vector.
+UPSERT_CHUNKS = """
+UNWIND $rows AS r
+MATCH (p:PEP {id: r.pep_id})
+MERGE (c:Chunk {id: r.id})
+SET c.heading = r.heading, c.text = r.text, c.idx = r.idx, c.emb = vecf32(r.emb)
+MERGE (c)-[:PART_OF]->(p)
+"""
+
+# PEP text mentions another PEP ("PEP 563", :pep:`563`). Only known PEPs are linked.
+UPSERT_REFERENCES = """
+UNWIND $rows AS r
+MATCH (a:PEP {id: r.src}), (b:PEP {id: r.dst})
+MERGE (a)-[x:REFERENCES]->(b)
+SET x.count = r.count
+"""
+
+# The PEP-Delegate header: who was given authority to decide the PEP.
+UPSERT_DELEGATES = """
+UNWIND $rows AS r
+MATCH (p:PEP {id: r.pep_id})
+MERGE (a:Person {id: r.person_id})
+ON CREATE SET a.name = r.name
+MERGE (a)-[:DELEGATE_FOR]->(p)
+"""
