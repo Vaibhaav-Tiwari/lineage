@@ -53,14 +53,16 @@ class ClaudeCodeLLM:
         from claude_agent_sdk import ResultMessage, create_sdk_mcp_server, query
 
         server = create_sdk_mcp_server(name="lineage", version="1.0.0", tools=build_sdk_tools(session))
-        usage = {}
-        async for msg in query(prompt=prompt + "\n\nRemember: finish by calling submit_answer.",
-                               options=self.options(server, system)):
-            if isinstance(msg, ResultMessage):
-                u = msg.usage or {}
-                usage = {"input": u.get("input_tokens", 0), "output": u.get("output_tokens", 0),
-                         "cache_read": u.get("cache_read_input_tokens", 0), "turns": msg.num_turns,
-                         "backend": "claude-code"}
+        usage = {"backend": "claude-code"}
+        try:
+            async for msg in query(prompt=prompt + "\n\nRemember: finish by calling submit_answer.",
+                                   options=self.options(server, system)):
+                if isinstance(msg, ResultMessage):
+                    u = msg.usage or {}
+                    usage.update(input=u.get("input_tokens", 0), output=u.get("output_tokens", 0),
+                                 cache_read=u.get("cache_read_input_tokens", 0), turns=msg.num_turns)
+        except Exception as e:  # e.g. subscription usage limit: explain instead of crashing
+            usage["error"] = str(e)
         return usage
 
 

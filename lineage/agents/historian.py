@@ -142,7 +142,8 @@ async def _finish(question, session: ToolSession, company_g, agent_g, user_g, as
     submitted, seen = session.submitted, session.union.ids()
     cited = [c for c in dict.fromkeys((submitted or {}).get("citations") or []) if c in seen]
     if not submitted or not cited:
-        return AskResult(None, ABSTAIN, True, [], Fragment(), [], session.trace, usage)
+        text = f"LLM unavailable ({usage['error']}). " + ABSTAIN if usage.get("error") else ABSTAIN
+        return AskResult(None, text, True, [], Fragment(), [], session.trace, usage)
     beliefs = []
     for b in submitted.get("beliefs") or []:
         ev = [x for x in b.get("evidence") or [] if x in seen]

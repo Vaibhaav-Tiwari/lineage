@@ -47,3 +47,20 @@ def test_claude_code_backend_uses_no_builtin_tools():
     opts = ClaudeCodeLLM().options(server=None)
     assert opts.tools == [] and opts.setting_sources == []
     assert opts.allowed_tools == ["mcp__lineage__*"]
+
+
+async def test_claude_code_errors_become_an_explained_abstention(db, monkeypatch):
+    import claude_agent_sdk
+
+    async def boom(*a, **k):
+        raise RuntimeError("You've hit your weekly limit")
+        yield  # pragma: no cover
+
+    monkeypatch.setattr(claude_agent_sdk, "query", boom)
+    cg, ag, ug = await _graphs(db)
+    try:
+        r = await ask("Who announced PEP 102?", company_g=cg, agent_g=ag, user_g=None, llm=ClaudeCodeLLM(), embedder=FakeEmbedder())
+        assert r.abstained and "weekly limit" in r.usage["error"]
+        assert "LLM unavailable" in r.text
+    finally:
+        await _cleanup(cg, ag, ug)
