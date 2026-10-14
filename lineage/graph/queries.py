@@ -410,3 +410,10 @@ FORGET_DECREMENT = "MATCH (:Episode {id: $id})-[:SUGGESTS]->(i:Interest) SET i.w
 FORGET_EPISODE = "MATCH (e:Episode {id: $id}) DELETE e"
 DROP_EMPTY_INTERESTS = "MATCH (i:Interest) WHERE i.weight <= 0 DELETE i"
 LIST_INTERESTS = "MATCH (i:Interest) RETURN i.area_ref AS area, i.weight AS weight, i.last_at AS last_at ORDER BY weight DESC"
+
+# Areas touched by a set of cited PEPs (for per-user interest memory).
+AREAS_OF_PEPS = """
+MATCH (p:PEP)-[:CONCERNS]->(a:Area)
+WHERE p.id IN $ids
+RETURN DISTINCT a.id AS id
+"""
