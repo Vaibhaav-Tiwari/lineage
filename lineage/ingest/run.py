@@ -111,8 +111,10 @@ async def run_pipeline(g, data_dir: Path, config_dir: Path, offline: bool = Fals
     texts = await _fetch_texts([p["number"] for p in rows.peps], data_dir, offline)
     thread_peps: dict[int, set[str]] = defaultdict(set)
     resolutions: dict[int, tuple[int, str]] = {}  # topic -> (pep, resolution url)
-    for p in rows.peps:
+    for i, p in enumerate(rows.peps, 1):
         n = p["number"]
+        if i % 50 == 0:
+            log(f"pep text: {i}/{len(rows.peps)}")
         urls = [u for u in (p.get("discussions_to"), p.get("resolution_url")) if u]
         if n in texts:
             doc = parse_pep_rst(n, texts[n])
@@ -130,7 +132,9 @@ async def run_pipeline(g, data_dir: Path, config_dir: Path, offline: bool = Fals
     await load_experts(g, parse_experts((await fetch_cached(EXPERTS_URL, data_dir / "devguide" / "experts.rst", offline=offline) or b"").decode()), resolver)
     log("experts index loaded")
 
-    for tid in sorted(thread_peps):
+    for j, tid in enumerate(sorted(thread_peps), 1):
+        if j % 25 == 0:
+            log(f"forum: {j}/{len(thread_peps)} threads")
         raw = await fetch_cached(f"{D.BASE}/t/{tid}.json", data_dir / "discourse" / f"t-{tid}.json", min_interval=1.0, offline=offline)
         if not raw:
             continue
