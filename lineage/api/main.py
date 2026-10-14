@@ -76,9 +76,9 @@ class State:
     def llm(self):
         if self._llm_factory:
             return self._llm_factory()
-        from lineage.agents.llm import AnthropicLLM
+        from lineage.agents.backends import make_llm
 
-        return AnthropicLLM()
+        return make_llm()
 
     async def user_graph(self, uid: str, db=None):
         g = (db or self.db).select_graph(self.name("user", uid))

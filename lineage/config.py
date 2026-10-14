@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     anthropic_api_key: str | None = None
     github_token: str | None = None
     llm_model: str = "claude-opus-5-5"
+    llm_backend: str = "claude-code"  # claude-code | graph-only | anthropic
     embed_model: str = "BAAI/bge-small-en-v1.5"
 
 

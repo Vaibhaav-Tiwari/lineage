@@ -74,13 +74,38 @@ def _evidence(union: Fragment, cited: list[str]) -> Fragment:
     return Fragment(nodes, edges)
 
 
-async def ask(question: str, *, company_g, agent_g, user_g, llm, embedder, as_of: date | None = None) -> AskResult:
-    prompt = question if not as_of else f"{question}\n\n(Answer as of {as_of.isoformat()}: ignore anything that happened later.)"
-    messages: list = [{"role": "user", "content": prompt}]
-    union, trace, usage = Fragment(), [], {"input": 0, "output": 0, "cache_read": 0}
-    submitted, nudged, used = None, False, 0
+class ToolSession:
+    """One question's tool use: runs graph tools, enforces the budget, records
+    what was seen (for citation checks) and what was submitted. Every LLM
+    backend drives the same session, so the rules are identical everywhere."""
 
-    for _ in range(MAX_TOOL_CALLS + 6):
+    def __init__(self, company_g, embedder, as_of: date | None, max_calls: int = MAX_TOOL_CALLS):
+        self.company_g, self.embedder, self.as_of, self.max_calls = company_g, embedder, as_of, max_calls
+        self.union, self.trace, self.used, self.submitted = Fragment(), [], 0, None
+
+    async def call(self, name: str, inp: dict) -> tuple[str, bool]:
+        if name == "submit_answer":
+            self.submitted = inp
+            return "received", False
+        if self.used >= self.max_calls:
+            return "Tool budget used up. Call submit_answer now.", True
+        self.used += 1
+        t0 = time.perf_counter()
+        try:
+            frag = await _run_tool(name, inp, self.company_g, self.embedder, self.as_of)
+            self.union = self.union.merge(frag)
+            content, err = json.dumps(frag.meta, default=str)[:12000], None
+        except Exception as e:  # reported to the model, never crashes the request
+            content, err = f"Error: {e}", str(e)
+        self.trace.append({"name": name, "input": inp, "ms": round((time.perf_counter() - t0) * 1000, 1),
+                           **({"error": err} if err else {})})
+        return content, err is not None
+
+
+async def _manual_loop(llm, prompt: str, session: ToolSession) -> dict:
+    messages: list = [{"role": "user", "content": prompt}]
+    usage, nudged = {"input": 0, "output": 0, "cache_read": 0}, False
+    for _ in range(session.max_calls + 6):
         turn = await llm.complete(SYSTEM, messages, TOOL_SPECS)
         for k, v in (turn.usage or {}).items():
             usage[k] = usage.get(k, 0) + v
@@ -95,34 +120,29 @@ async def ask(question: str, *, company_g, agent_g, user_g, llm, embedder, as_of
             continue
         results = []
         for c in turn.tool_calls:
-            if c["name"] == "submit_answer":
-                submitted = c["input"]
-                results.append({"type": "tool_result", "tool_use_id": c["id"], "content": "received"})
-                continue
-            if used >= MAX_TOOL_CALLS:
-                results.append({"type": "tool_result", "tool_use_id": c["id"], "is_error": True,
-                                "content": "Tool budget used up. Call submit_answer now."})
-                continue
-            used += 1
-            t0 = time.perf_counter()
-            try:
-                frag = await _run_tool(c["name"], c["input"], company_g, embedder, as_of)
-                union = union.merge(frag)
-                content, err = json.dumps(frag.meta, default=str)[:12000], None
-            except Exception as e:  # report to the model, never crash the request
-                content, err = f"Error: {e}", str(e)
-            trace.append({"name": c["name"], "input": c["input"], "ms": round((time.perf_counter() - t0) * 1000, 1),
-                          **({"error": err} if err else {})})
-            results.append({"type": "tool_result", "tool_use_id": c["id"], "content": content, **({"is_error": True} if err else {})})
-        if submitted is not None:
+            content, is_err = await session.call(c["name"], c["input"])
+            results.append({"type": "tool_result", "tool_use_id": c["id"], "content": content, **({"is_error": True} if is_err else {})})
+        if session.submitted is not None:
             break
         messages.append({"role": "user", "content": results})
+    return usage
 
-    seen = union.ids()
+
+async def ask(question: str, *, company_g, agent_g, user_g, llm, embedder, as_of: date | None = None) -> AskResult:
+    prompt = question if not as_of else f"{question}\n\n(Answer as of {as_of.isoformat()}: ignore anything that happened later.)"
+    session = ToolSession(company_g, embedder, as_of)
+    if hasattr(llm, "run_session"):  # backends that drive their own loop (Agent SDK, graph-only)
+        usage = await llm.run_session(SYSTEM, prompt, session, TOOL_SPECS)
+    else:
+        usage = await _manual_loop(llm, prompt, session)
+    return await _finish(question, session, company_g, agent_g, user_g, as_of, usage)
+
+
+async def _finish(question, session: ToolSession, company_g, agent_g, user_g, as_of, usage) -> AskResult:
+    submitted, seen = session.submitted, session.union.ids()
     cited = [c for c in dict.fromkeys((submitted or {}).get("citations") or []) if c in seen]
     if not submitted or not cited:
-        return AskResult(None, ABSTAIN, True, [], Fragment(), [], trace, usage)
-
+        return AskResult(None, ABSTAIN, True, [], Fragment(), [], session.trace, usage)
     beliefs = []
     for b in submitted.get("beliefs") or []:
         ev = [x for x in b.get("evidence") or [] if x in seen]
@@ -132,4 +152,5 @@ async def ask(question: str, *, company_g, agent_g, user_g, llm, embedder, as_of
     if user_g is not None:
         areas = [r["id"] for r in await ro(company_g, Q.AREAS_OF_PEPS, {"ids": [c for c in cited if c.startswith("pep:")]})]
         await record_episode(user_g, question, answer_id, areas)
-    return AskResult(answer_id, submitted.get("text", ""), False, cited, _evidence(union, cited), beliefs, trace, usage)
+    return AskResult(answer_id, submitted.get("text", ""), False, cited, _evidence(session.union, cited),
+                     beliefs, session.trace, usage)
