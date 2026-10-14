@@ -259,3 +259,40 @@ MERGE (d)-[:DECIDES]->(p)
 """
 
 EVENT_SET_APPLIED = "MATCH (e:Event {id: $id}) SET e.applied = $applied"
+
+# --- Retrieval ---------------------------------------------------------------------
+# NOTE: db.idx.vector.* yields a DISTANCE in `score` (lower = closer). We convert
+# to similarity as 1 - distance; never sort the raw score descending.
+
+VECTOR_CHUNKS = """
+CALL db.idx.vector.queryNodes('Chunk', 'emb', $k, vecf32($q)) YIELD node, score
+MATCH (node)-[:PART_OF]->(p:PEP)
+WHERE $as_of IS NULL OR p.created IS NULL OR p.created <= date($as_of)
+RETURN node.id AS id, 'Chunk' AS label, node.heading AS heading, node.text AS text, score AS dist,
+       p.id AS pep_id, p.title AS title, p.number AS number, p.source_url AS url, p.pagerank AS pagerank
+"""
+
+VECTOR_POSTS = """
+CALL db.idx.vector.queryNodes('Post', 'emb', $k, vecf32($q)) YIELD node, score
+MATCH (node)-[:IN]->(:Thread)<-[:DISCUSSED_IN]-(p:PEP)
+WHERE $as_of IS NULL OR (node.created <= date($as_of) AND (p.created IS NULL OR p.created <= date($as_of)))
+RETURN node.id AS id, 'Post' AS label, 'Discussion' AS heading, node.text AS text, score AS dist,
+       p.id AS pep_id, p.title AS title, p.number AS number, node.source_url AS url, p.pagerank AS pagerank
+"""
+
+FULLTEXT_CHUNKS = """
+CALL db.idx.fulltext.queryNodes('Chunk', $q) YIELD node, score
+MATCH (node)-[:PART_OF]->(p:PEP)
+WHERE $as_of IS NULL OR p.created IS NULL OR p.created <= date($as_of)
+RETURN node.id AS id, 'Chunk' AS label, node.heading AS heading, node.text AS text, score AS ft,
+       p.id AS pep_id, p.title AS title, p.number AS number, p.source_url AS url, p.pagerank AS pagerank
+LIMIT $k
+"""
+
+FULLTEXT_PEP_TITLES = """
+CALL db.idx.fulltext.queryNodes('PEP', $q) YIELD node, score
+WHERE $as_of IS NULL OR node.created IS NULL OR node.created <= date($as_of)
+RETURN node.id AS id, 'PEP' AS label, 'Title' AS heading, node.title AS text, score AS ft,
+       node.id AS pep_id, node.title AS title, node.number AS number, node.source_url AS url, node.pagerank AS pagerank
+LIMIT $k
+"""
