@@ -1,0 +1,6 @@
+{"id": 3000, "title": "PEP 100: Sample feature", "slug": "pep-100-sample", "created_at": "2020-02-02T10:00:00.000Z", "posts_count": 5,
+ "post_stream": {"stream": [9001, 9002, 9003, 9004, 9005], "posts": [
+  {"id": 9001, "username": "annauthor", "name": "Ann Author", "created_at": "2020-02-02T10:00:00.000Z", "post_number": 1, "reply_to_post_number": null, "cooked": "<p>Here is <b>PEP 100</b>.</p>"},
+  {"id": 9002, "username": "sc_member", "name": "Steering Person", "created_at": "2020-03-10T12:30:00.000Z", "post_number": 2, "reply_to_post_number": 1, "cooked": "<p>The steering council has <strong>accepted</strong> PEP 100.</p>"},
+  {"id": 9003, "username": "bystander", "name": "", "created_at": "2020-03-11T08:00:00.000Z", "post_number": 3, "reply_to_post_number": 2, "cooked": "<p>Congrats &amp; thanks!</p>"}
+ ]}}

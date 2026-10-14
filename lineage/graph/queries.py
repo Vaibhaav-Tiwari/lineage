@@ -99,3 +99,48 @@ ON CREATE SET p.github = r.github
 MERGE (p)-[e:EXPERT_IN]->(a)
 SET e.assignable = r.assignable, e.inactive = r.inactive
 """
+
+# --- Ingest: discuss.python.org --------------------------------------------
+
+UPSERT_THREAD = """
+MERGE (t:Thread {id: $id})
+SET t.title = $title, t.created = date($date), t.posts_count = $posts_count, t.source_url = $url
+"""
+
+# Posts with author and thread; embeddings let search find the discussion itself.
+UPSERT_POSTS = """
+UNWIND $rows AS r
+MERGE (po:Post {id: r.id})
+SET po.post_number = r.post_number, po.text = r.text, po.created = date(r.date),
+    po.source_url = r.url, po.emb = vecf32(r.emb)
+WITH po, r
+MATCH (t:Thread {id: r.thread_id})
+MERGE (po)-[:IN]->(t)
+WITH po, r
+MERGE (a:Person {id: r.person_id})
+ON CREATE SET a.name = r.name
+MERGE (a)-[:POSTED]->(po)
+"""
+
+LINK_PEP_THREAD = """
+UNWIND $rows AS r
+MATCH (p:PEP {id: r.pep_id}), (t:Thread {id: r.thread_id})
+MERGE (p)-[:DISCUSSED_IN]->(t)
+"""
+
+# Decision provenance: the exact post that announced it, and who posted it.
+LINK_DECISION_POST = """
+MATCH (d:Decision)-[:DECIDES]->(:PEP {id: $pep_id})
+WHERE d.kind IN ['accept', 'reject']
+MATCH (a:Person)-[:POSTED]->(po:Post {id: $post_id})
+MERGE (d)-[:RECORDED_IN]->(po)
+MERGE (d)-[:ANNOUNCED_BY]->(a)
+SET d.at = coalesce(d.at, po.created)
+"""
+
+LINK_DECISION_THREAD = """
+MATCH (d:Decision)-[:DECIDES]->(:PEP {id: $pep_id})
+WHERE d.kind IN ['accept', 'reject']
+MATCH (t:Thread {id: $thread_id})
+MERGE (d)-[:RECORDED_IN]->(t)
+"""
