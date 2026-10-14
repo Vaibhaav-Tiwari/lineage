@@ -348,3 +348,65 @@ LIMIT 1
 AREA_EXPERTS = """
 MATCH (a:Person)-[r:EXPERT_IN|COMMITTED_TO]->(b:Area {id: $id})
 """ + _TRIPLE
+
+# --- Agent memory (one graph per agent) -------------------------------------------
+# Evidence nodes are stubs pointing at company-graph ids: Cypher cannot cross
+# graphs, so lineage crosses them by id (see graph/ripple.py).
+
+CREATE_ANSWER = """
+CREATE (a:Answer {id: $id, question: $question, text: $text, created_at: $now, as_of: $as_of, stale: false})
+"""
+
+LINK_EVIDENCE = """
+MATCH (x {id: $src})
+UNWIND $refs AS ref
+MERGE (e:Evidence {ref: ref})
+ON CREATE SET e.id = 'ev:' + ref, e.ref_label = split(ref, ':')[0]
+MERGE (x)-[:DERIVED_FROM]->(e)
+"""
+
+CREATE_BELIEFS = """
+MATCH (a:Answer {id: $answer_id})
+UNWIND $beliefs AS b
+CREATE (bl:Belief {id: b.id, text: b.text, status: b.status, confidence: b.confidence, created_at: $now, stale: false})
+MERGE (a)-[:DERIVED_FROM]->(bl)
+"""
+
+LIST_BELIEFS = """
+MATCH (b:Belief)
+WHERE $status IS NULL OR b.status = $status
+RETURN b.id AS id, b.text AS text, b.status AS status, b.confidence AS confidence,
+       b.stale AS stale, b.stale_because AS stale_because, b.created_at AS created_at
+ORDER BY b.created_at
+"""
+
+CREATE_ACTION = """
+CREATE (x:Action {id: $id, kind: $kind, payload_json: $payload, status: 'pending', created_at: $now})
+WITH x
+UNWIND $derived_from AS ref
+MATCH (y) WHERE (y:Answer OR y:Belief) AND y.id = ref
+MERGE (x)-[:DERIVED_FROM]->(y)
+"""
+
+# --- User memory (one graph per user) ----------------------------------------------
+
+CREATE_EPISODE = """
+CREATE (e:Episode {id: $id, question: $question, answer_id: $answer_id, at: $now})
+WITH e
+UNWIND $areas AS ref
+MERGE (i:Interest {area_ref: ref})
+ON CREATE SET i.weight = 0
+SET i.weight = i.weight + 1, i.last_at = $now
+MERGE (e)-[:SUGGESTS]->(i)
+"""
+
+EXPLAIN_INTEREST = """
+MATCH (e:Episode)-[r:SUGGESTS]->(i:Interest {area_ref: $area})
+RETURN e.id AS eid, e.question AS q, e.at AS at, i.area_ref AS area, i.weight AS w
+ORDER BY e.at
+"""
+
+FORGET_DECREMENT = "MATCH (:Episode {id: $id})-[:SUGGESTS]->(i:Interest) SET i.weight = i.weight - 1"
+FORGET_EPISODE = "MATCH (e:Episode {id: $id}) DELETE e"
+DROP_EMPTY_INTERESTS = "MATCH (i:Interest) WHERE i.weight <= 0 DELETE i"
+LIST_INTERESTS = "MATCH (i:Interest) RETURN i.area_ref AS area, i.weight AS weight, i.last_at AS last_at ORDER BY weight DESC"
