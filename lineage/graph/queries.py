@@ -86,3 +86,16 @@ MERGE (a:Person {id: r.person_id})
 ON CREATE SET a.name = r.name
 MERGE (a)-[:DELEGATE_FOR]->(p)
 """
+
+# --- Ingest: Experts Index (declared ownership) ----------------------------
+
+# Person -[:EXPERT_IN {assignable, inactive}]-> Area, from the devguide table.
+UPSERT_EXPERTS = """
+UNWIND $rows AS r
+MERGE (a:Area {id: r.area_id})
+SET a.name = r.area, a.kind = r.kind
+MERGE (p:Person {id: r.person_id})
+ON CREATE SET p.github = r.github
+MERGE (p)-[e:EXPERT_IN]->(a)
+SET e.assignable = r.assignable, e.inactive = r.inactive
+"""
