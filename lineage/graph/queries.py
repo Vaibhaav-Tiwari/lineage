@@ -296,3 +296,55 @@ RETURN node.id AS id, 'PEP' AS label, 'Title' AS heading, node.title AS text, sc
        node.id AS pep_id, node.title AS title, node.number AS number, node.source_url AS url, node.pagerank AS pagerank
 LIMIT $k
 """
+
+# --- Agent tools (each returns rows of src/rel/dst "triples") ----------------------
+
+_TRIPLE = """
+RETURN a.id AS s, labels(a)[0] AS sl, properties(a) AS sp, type(r) AS t, properties(r) AS rp,
+       b.id AS d, labels(b)[0] AS dl, properties(b) AS dp
+"""
+
+PEP_NODE = "MATCH (p:PEP {id: $id}) RETURN properties(p) AS p"
+
+# Who/what points at the PEP: decisions, authors, delegates, implementing PRs, events.
+INTO_PEP = """
+MATCH (a)-[r:DECIDES|AUTHORED|DELEGATE_FOR|IMPLEMENTS|AFFECTS]->(b:PEP {id: $id})
+""" + _TRIPLE + " LIMIT 100"
+
+# Where each decision was recorded and who announced it.
+DECISION_PROVENANCE = """
+MATCH (:PEP {id: $id})<-[:DECIDES]-(a:Decision)-[r:RECORDED_IN|ANNOUNCED_BY]->(b)
+""" + _TRIPLE
+
+# The supersede chain in both directions, up to 3 hops.
+SUPERSEDE_CHAIN = """
+MATCH path = (:PEP {id: $id})-[:SUPERSEDES*1..3]-(:PEP)
+UNWIND relationships(path) AS r
+WITH DISTINCT r
+WITH startNode(r) AS a, r, endNode(r) AS b
+""" + _TRIPLE
+
+PEP_THREADS = """
+MATCH (a:PEP {id: $id})-[r:DISCUSSED_IN]->(b:Thread)
+""" + _TRIPLE + " LIMIT 10"
+
+# Neighbourhood over citation/supersede/require links (hop count fixed per query).
+RELATED_1 = """
+MATCH path = (:PEP {id: $id})-[:REFERENCES|SUPERSEDES|REQUIRES*1..1]-(:PEP)
+UNWIND relationships(path) AS r WITH DISTINCT r WITH startNode(r) AS a, r, endNode(r) AS b
+""" + _TRIPLE + " LIMIT 200"
+RELATED_2 = RELATED_1.replace("*1..1", "*1..2")
+RELATED_3 = RELATED_1.replace("*1..1", "*1..3")
+
+FIND_AREA = """
+MATCH (a:Area)
+WHERE toLower(a.name) = toLower($t) OR toLower(a.name) CONTAINS toLower($t)
+RETURN a.id AS id, a.name AS name, toLower(a.name) = toLower($t) AS exact
+ORDER BY exact DESC, size(a.name) ASC
+LIMIT 1
+"""
+
+# Declared (Experts Index) and revealed (commits) owners of one area.
+AREA_EXPERTS = """
+MATCH (a:Person)-[r:EXPERT_IN|COMMITTED_TO]->(b:Area {id: $id})
+""" + _TRIPLE
