@@ -144,3 +144,30 @@ WHERE d.kind IN ['accept', 'reject']
 MATCH (t:Thread {id: $thread_id})
 MERGE (d)-[:RECORDED_IN]->(t)
 """
+
+# --- Ingest: GitHub (revealed ownership, implementing PRs) -----------------
+
+# Person -[:COMMITTED_TO {count, last_at}]-> Area: who actually works on it (last 12 months).
+UPSERT_COMMITTED = """
+UNWIND $rows AS r
+MERGE (a:Area {id: r.area_id})
+ON CREATE SET a.name = r.area
+MERGE (p:Person {id: r.person_id})
+ON CREATE SET p.github = r.github
+MERGE (p)-[c:COMMITTED_TO]->(a)
+SET c.count = r.count, c.last_at = date(r.last_at)
+"""
+
+# Merged PR whose title names a PEP -[:IMPLEMENTS]-> that PEP.
+UPSERT_PRS = """
+UNWIND $rows AS r
+MATCH (pep:PEP {id: r.pep_id})
+MERGE (pr:PR {id: r.id})
+SET pr.number = r.number, pr.title = r.title, pr.source_url = r.url,
+    pr.merged_at = CASE WHEN r.merged_at IS NULL THEN null ELSE date(r.merged_at) END
+MERGE (pr)-[:IMPLEMENTS]->(pep)
+WITH pr, r
+MERGE (a:Person {id: r.person_id})
+ON CREATE SET a.github = r.github
+MERGE (a)-[:AUTHORED_PR]->(pr)
+"""
