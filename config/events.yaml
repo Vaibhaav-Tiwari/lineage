@@ -1,0 +1,12 @@
+# Real change events the demo can replay. The graph is loaded as it was BEFORE the
+# event (rewind), then the Steward applies it live.
+- slug: pep-563-superseded
+  kind: supersede
+  at: "2025-05-05"
+  pep: 563
+  by: [649, 749]
+  before_status: Accepted
+  after_status: Superseded
+  summary: "PEP 563 (postponed evaluation of annotations) is superseded by PEP 649 + PEP 749 (deferred evaluation, Python 3.14)."
+  source_url: https://discuss.python.org/t/pep-749-implementing-pep-649/54974/66
+  replay: true

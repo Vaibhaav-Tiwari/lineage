@@ -171,3 +171,91 @@ MERGE (a:Person {id: r.person_id})
 ON CREATE SET a.github = r.github
 MERGE (a)-[:AUTHORED_PR]->(pr)
 """
+
+# --- Derived edges -------------------------------------------------------------
+
+# People who co-wrote a PEP (weight 3 per shared PEP).
+CO_AUTHOR_PAIRS = """
+MATCH (a:Person)-[:AUTHORED]->(p:PEP)<-[:AUTHORED]-(b:Person)
+WHERE a.id < b.id
+RETURN a.id AS a, b.id AS b, count(DISTINCT p) AS n
+"""
+
+# Distinct posters per thread (pairs are built in Python to avoid a post×post blow-up).
+THREAD_POSTERS = """
+MATCH (a:Person)-[:POSTED]->(:Post)-[:IN]->(t:Thread)
+RETURN t.id AS t, collect(DISTINCT a.id) AS people
+"""
+
+# People committing to the same area (weight 2 per shared area).
+CO_AREA_PAIRS = """
+MATCH (a:Person)-[:COMMITTED_TO]->(ar:Area)<-[:COMMITTED_TO]-(b:Person)
+WHERE a.id < b.id
+RETURN a.id AS a, b.id AS b, count(DISTINCT ar) AS n
+"""
+
+# Stored once per pair (lower id → higher id); weight is recomputed, so re-runs are safe.
+UPSERT_COLLABORATED = """
+UNWIND $rows AS r
+MATCH (a:Person {id: r.a}), (b:Person {id: r.b})
+MERGE (a)-[c:COLLABORATED]->(b)
+SET c.weight = r.w
+"""
+
+AREAS = "MATCH (a:Area) RETURN a.id AS id, a.name AS name"
+PEP_TITLES = "MATCH (p:PEP) RETURN p.id AS id, p.title AS title"
+
+# Full-text search over PEP text chunks for one area name.
+CHUNKS_MENTIONING = """
+CALL db.idx.fulltext.queryNodes('Chunk', $q) YIELD node
+MATCH (node)-[:PART_OF]->(p:PEP)
+RETURN p.id AS pep, node.text AS text
+"""
+
+UPSERT_CONCERNS = """
+UNWIND $rows AS r
+MATCH (p:PEP {id: r.pep}), (a:Area {id: r.area})
+MERGE (p)-[:CONCERNS]->(a)
+"""
+
+# Influence of each PEP in the citation graph, stored for search re-ranking.
+PAGERANK_PEPS = """
+CALL algo.pageRank('PEP', 'REFERENCES') YIELD node, score
+SET node.pagerank = score
+"""
+
+# --- Replayable change events ----------------------------------------------------
+
+UPSERT_EVENT = """
+MERGE (e:Event {id: $id})
+ON CREATE SET e.applied = true
+SET e.kind = $kind, e.at = date($at), e.summary = $summary, e.source_url = $source_url, e.payload_json = $payload
+WITH e
+MATCH (p:PEP {id: $pep_id})
+MERGE (e)-[:AFFECTS]->(p)
+"""
+
+EVENT_SET_STATUS = "MATCH (p:PEP {id: $pep_id}) SET p.status = $status"
+
+EVENT_DELETE_SUPERSEDES = """
+MATCH (n:PEP)-[r:SUPERSEDES]->(:PEP {id: $pep_id})
+WHERE n.id IN $by
+DELETE r
+"""
+
+EVENT_DELETE_DECISION = "MATCH (d:Decision {id: $decision_id}) DELETE d"
+
+EVENT_ADD_SUPERSEDES = """
+UNWIND $by AS newer
+MATCH (n:PEP {id: newer}), (p:PEP {id: $pep_id})
+MERGE (n)-[:SUPERSEDES]->(p)
+"""
+
+EVENT_ADD_DECISION = """
+MATCH (p:PEP {id: $pep_id})
+MERGE (d:Decision {id: $decision_id})
+SET d.kind = 'supersede', d.at = date($at), d.source_url = $source_url, d.summary = $summary
+MERGE (d)-[:DECIDES]->(p)
+"""
+
+EVENT_SET_APPLIED = "MATCH (e:Event {id: $id}) SET e.applied = $applied"

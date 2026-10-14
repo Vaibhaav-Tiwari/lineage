@@ -10,10 +10,13 @@ import httpx
 _last_call: dict[str, float] = {}
 
 
-async def fetch_cached(url: str, path: Path, min_interval: float = 0.0, headers: dict | None = None) -> bytes:
+async def fetch_cached(url: str, path: Path, min_interval: float = 0.0, headers: dict | None = None, offline: bool = False) -> bytes | None:
+    """Return cached bytes, else fetch and cache. With offline=True a cache miss returns None."""
     path = Path(path)
     if path.exists():
         return path.read_bytes()
+    if offline:
+        return None
     host = httpx.URL(url).host
     wait = _last_call.get(host, 0) + min_interval - time.monotonic()
     if wait > 0:
