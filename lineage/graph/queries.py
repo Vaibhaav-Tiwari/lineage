@@ -636,3 +636,20 @@ OPTIONAL MATCH (p)-[:AUTHORED]->(pep:PEP)
 RETURN p.id AS id, p.name AS name, p.github AS github, count(pep) AS peps
 ORDER BY peps DESC, id LIMIT 15
 """
+
+# --- Index card for one node --------------------------------------------------------
+
+_CARD = """
+MATCH (n:{label} {id: $id})
+OPTIONAL MATCH (n)-[r]-(m)
+WITH n, r, m LIMIT 60
+RETURN properties(n) AS props, type(r) AS rel, startNode(r).id = n.id AS outgoing, m.id AS mid, labels(m)[0] AS ml,
+       coalesce(m.title, m.name, m.github, m.kind, m.heading) AS mname
+"""
+CARD_BY_LABEL = {lab: _CARD.replace("{label}", lab) for lab in
+                 ("PEP", "Person", "Decision", "Thread", "Post", "PR", "Chunk", "Area", "Event", "Team")}
+
+BELIEFS_ON_REF = """
+MATCH (b:Belief)-[:DERIVED_FROM]->(:Evidence {ref: $ref})
+RETURN b.id AS id, b.text AS text, b.status AS status, b.confidence AS confidence
+"""

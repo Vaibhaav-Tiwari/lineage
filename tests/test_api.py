@@ -84,3 +84,15 @@ async def test_historian_connection_cannot_write_company_graph(app_env):
     hist = c._transport.app.state.historian_db
     with pytest.raises(Exception, match="(?i)noperm|permission"):
         await hist.select_graph(f"{prefix}:company").query("CREATE (:Hack)")
+
+
+async def test_node_card_shows_props_neighbours_and_dependent_beliefs(app_env):
+    c, _, _ = app_env
+    await c.post("/ask", json={"question": "Who announced PEP 102?"})
+    card = (await c.get("/nodes/pep:102")).json()
+    assert card["id"] == "pep:102" and card["label"] == "PEP" and card["props"]["title"] == "New Way"
+    nb = {(n["rel"], n["id"]) for n in card["neighbours"]}
+    assert ("SUPERSEDES", "pep:101") in nb and ("DECIDES", "decision:pep:102:accept") in nb
+    bob = (await c.get("/nodes/person:bob")).json()
+    assert [b["text"] for b in bob["beliefs"]] == ["Bob announced 102"]
+    assert (await c.get("/nodes/pep:999999")).status_code == 404

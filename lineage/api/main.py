@@ -251,6 +251,29 @@ def create_app(prefix: str = "lineage", llm_factory: Callable | None = None, emb
         except ValueError as e:
             raise HTTPException(404, str(e))
 
+    # --- Index card --------------------------------------------------------------------
+
+    LABELS = {"pep": "PEP", "person": "Person", "decision": "Decision", "thread": "Thread", "post": "Post",
+              "pr": "PR", "chunk": "Chunk", "area": "Area", "event": "Event", "team": "Team"}
+
+    @app.get("/nodes/{nid:path}")
+    async def node_card(nid: str):
+        label = LABELS.get(nid.split(":", 1)[0])
+        if not label:
+            raise HTTPException(404, "unknown id")
+        rows = await ro(st.db.select_graph(st.name("company")), Q.CARD_BY_LABEL[label], {"id": nid})
+        if not rows:
+            raise HTTPException(404, "not found")
+        from lineage.graph.tools import _clean
+
+        props = _clean(rows[0]["props"])
+        if "text" in props and isinstance(props["text"], str):
+            props["text"] = props["text"][:800]
+        neighbours = [{"rel": r["rel"], "direction": "out" if r["outgoing"] else "in", "id": r["mid"],
+                       "label": r["ml"], "name": r["mname"]} for r in rows if r["rel"]]
+        beliefs = await ro(st.db.select_graph(st.name("agent", "historian")), Q.BELIEFS_ON_REF, {"ref": nid})
+        return {"id": nid, "label": label, "props": props, "neighbours": neighbours, "beliefs": beliefs}
+
     # --- Ops + demo reset ----------------------------------------------------------------
 
     @app.get("/ops/graphs")
