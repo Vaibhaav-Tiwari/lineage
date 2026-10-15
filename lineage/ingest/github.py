@@ -1,6 +1,8 @@
 """CPython on GitHub → revealed ownership (COMMITTED_TO) and IMPLEMENTS edges."""
 
+import json
 import re
+from pathlib import Path
 
 from lineage import ids
 from lineage.db import write_batch
@@ -45,3 +47,30 @@ async def load_prs(g, items: list[dict], resolver) -> None:
                 "person_id": resolver.resolve(github=login),
             })
     await write_batch(g, Q.UPSERT_PRS, rows)
+
+
+def user_display_name(user: dict) -> str | None:
+    """The public profile name, unless it is blank or just the handle again."""
+    name = (user.get("name") or "").strip()
+    return name if name and name.lower() != (user.get("login") or "").lower() else None
+
+
+async def fetch_github_names(handles, data_dir: Path, headers: dict, offline: bool) -> dict[str, str]:
+    """handle -> public display name, one cached GET /users/{login} per handle."""
+    from lineage.ingest.cache import fetch_cached
+
+    out: dict[str, str] = {}
+    for h in sorted({h.lower() for h in handles if h}):
+        try:
+            raw = await fetch_cached(f"{API}/users/{h}", Path(data_dir) / "github" / "users" / f"{h}.json",
+                                     min_interval=0.2, headers=headers, offline=offline)
+        except Exception:  # renamed / deleted account: keep the handle
+            continue
+        user = json.loads(raw) if raw else {}
+        if set(user) - {"login", "name"}:  # keep only what we use; no emails or bios in the repo
+            user = {"login": user.get("login"), "name": user.get("name")}
+            (Path(data_dir) / "github" / "users" / f"{h}.json").write_text(json.dumps(user))
+        name = user_display_name(user)
+        if name:
+            out[h] = name
+    return out

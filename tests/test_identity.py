@@ -59,3 +59,30 @@ async def test_load_people_sets_handles_on_person_nodes(g):
     await load_people(g, r)
     out = await ro(g, "MATCH (p:Person) RETURN p.id AS id, p.github AS gh, p.discourse AS d, p.aliases AS a")
     assert out == [{"id": "person:gvanrossum", "gh": "gvanrossum", "d": "guido", "a": ["Guido van Rossum"]}]
+
+
+def test_github_name_lets_a_handle_join_the_person_known_by_name():
+    r = IdentityResolver({}, github_names={"viicos": "Victorien Plot"})
+    a = r.resolve(name="Victorien Plot")
+    assert r.resolve(github="viicos") == a
+    rows = {p["id"]: p for p in r.people()}
+    assert rows[a]["github"] == "viicos" and rows[a]["name"] == "Victorien Plot"
+
+
+def test_github_name_fills_in_display_name_for_a_new_handle():
+    r = IdentityResolver({}, github_names={"kumaraditya303": "Kumar Aditya"})
+    pid = r.resolve(github="KumarAditya303")
+    assert pid == "person:kumaraditya303"
+    assert r.people()[0]["name"] == "Kumar Aditya"
+
+
+def test_same_name_but_different_github_accounts_stay_apart():
+    r = IdentityResolver({}, github_names={"dsmith1": "David Smith", "dsmith2": "David Smith"})
+    assert r.resolve(github="dsmith1") != r.resolve(github="dsmith2")
+
+
+def test_a_fuller_name_replaces_a_first_name_only_display_name():
+    r = IdentityResolver({"Victorien Plot": "viicos"}, github_names={"viicos": "Victorien"})
+    pid = r.resolve(github="viicos")
+    assert r.resolve(name="Victorien Plot") == pid
+    assert r.people()[0]["name"] == "Victorien Plot"

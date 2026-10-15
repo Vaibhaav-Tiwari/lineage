@@ -58,13 +58,18 @@ async def _fetch_texts(numbers: list[int], data_dir: Path, offline: bool) -> dic
     return {n: t for n, t in await asyncio.gather(*(one(n) for n in numbers)) if t}
 
 
-async def _github(g, cfg: Path, data_dir: Path, raw_peps: dict, resolver, offline: bool, log) -> None:
+def _gh_headers(offline: bool, log) -> tuple[dict, bool]:
     token = settings().github_token
-    headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"} if token else {}
     if not token and not offline:
         log("github: no GITHUB_TOKEN — using cache only")
         offline = True
+    return ({"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"} if token else {}), offline
+
+
+async def _fetch_github(cfg: Path, data_dir: Path, raw_peps: dict, headers: dict, offline: bool) -> tuple[dict, list]:
+    """Commits per area (last 12 months) and merged PRs naming a focus PEP, all cached."""
     since = time.strftime("%Y-%m-%dT00:00:00Z", time.gmtime(time.time() - 365 * 86400))
+    by_area: dict[str, list] = {}
     for area, paths in _yaml(cfg / "areas.yaml", {}).items():
         commits = []
         for path in paths:
@@ -76,7 +81,7 @@ async def _github(g, cfg: Path, data_dir: Path, raw_peps: dict, resolver, offlin
                 commits += batch
                 if len(batch) < 100:
                     break
-        await GH.load_revealed(g, GH.aggregate_commits(commits, area), resolver)
+        by_area[area] = commits
     focus = set(_yaml(cfg / "focus_peps.yaml", {}).get("peps", []))
     items = []
     for n in sorted(focus):
@@ -88,8 +93,7 @@ async def _github(g, cfg: Path, data_dir: Path, raw_peps: dict, resolver, offlin
         raw = await fetch_cached(url, data_dir / "github" / f"search-pep-{n}.json", min_interval=2.1, headers=headers, offline=offline)
         if raw:
             items += [i for i in json.loads(raw).get("items", []) if n in GH.extract_pep_refs(i.get("title", ""))]
-    await GH.load_prs(g, items, resolver)
-    log(f"github: {len(items)} PEP-implementing PRs")
+    return by_area, items
 
 
 async def run_pipeline(g, data_dir: Path, config_dir: Path, offline: bool = False, skip_github: bool = False,
@@ -104,7 +108,18 @@ async def run_pipeline(g, data_dir: Path, config_dir: Path, offline: bool = Fals
 
     raw_peps = json.loads(await fetch_cached(PEPS_URL, data_dir / "peps.json", offline=offline))
     rows = parse_peps(raw_peps)
-    resolver = IdentityResolver(_yaml(cfg / "aliases.yaml", {}))
+    experts = parse_experts((await fetch_cached(EXPERTS_URL, data_dir / "devguide" / "experts.rst", offline=offline) or b"").decode())
+    commits, pr_items = {}, []
+    names: dict[str, str] = {}
+    if not skip_github:
+        headers, gh_offline = _gh_headers(offline, log)
+        commits, pr_items = await _fetch_github(cfg, data_dir, raw_peps, headers, gh_offline)
+        handles = [r["github"] for r in experts]
+        handles += [(c.get("author") or {}).get("login") for cs in commits.values() for c in cs]
+        handles += [(i.get("user") or {}).get("login") for i in pr_items]
+        names = await GH.fetch_github_names(handles, data_dir, headers, gh_offline)
+        log(f"github: display names for {len(names)} handles")
+    resolver = IdentityResolver(_yaml(cfg / "aliases.yaml", {}), github_names=names)
     await load_peps(g, rows, person_id=lambda name: resolver.resolve(name=name))
     log(f"peps: {len(rows.peps)} PEPs, {len(rows.decisions)} decisions, {len(rows.supersedes)} supersedes")
 
@@ -129,7 +144,7 @@ async def run_pipeline(g, data_dir: Path, config_dir: Path, offline: bool = Fals
             resolutions.setdefault(res[0], (n, p["resolution_url"]))
     log(f"pep text: {len(texts)} PEPs chunked + embedded; {len(thread_peps)} forum threads referenced")
 
-    await load_experts(g, parse_experts((await fetch_cached(EXPERTS_URL, data_dir / "devguide" / "experts.rst", offline=offline) or b"").decode()), resolver)
+    await load_experts(g, experts, resolver)
     log("experts index loaded")
 
     for j, tid in enumerate(sorted(thread_peps), 1):
@@ -154,7 +169,10 @@ async def run_pipeline(g, data_dir: Path, config_dir: Path, offline: bool = Fals
     log(f"forum: {len(thread_peps)} threads processed")
 
     if not skip_github:
-        await _github(g, cfg, data_dir, raw_peps, resolver, offline, log)
+        for area, cs in commits.items():
+            await GH.load_revealed(g, GH.aggregate_commits(cs, area), resolver)
+        await GH.load_prs(g, pr_items, resolver)
+        log(f"github: {len(pr_items)} PEP-implementing PRs")
 
     await load_people(g, resolver)
     log(f"people: {len(resolver.people())} resolved")

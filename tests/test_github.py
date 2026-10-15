@@ -36,3 +36,21 @@ async def test_load_revealed_and_prs(g):
     assert impl == [{"pr": "pr:1", "pep": "pep:102"}, {"pr": "pr:1", "pep": "pep:105"}]
     assert await ro(g, "MATCH (:Person {id:'person:dave'})-[:AUTHORED_PR]->(:PR {id:'pr:1'}) RETURN count(*) AS c") == [{"c": 1}]
     assert await ro(g, "MATCH (pr:PR {id:'pr:2'}) RETURN count(pr) AS c") == [{"c": 0}]  # mentions no PEP
+
+
+def test_user_display_name_ignores_blank_and_handle_echo():
+    from lineage.ingest.github import user_display_name
+
+    assert user_display_name({"login": "viicos", "name": " Victorien Plot "}) == "Victorien Plot"
+    assert user_display_name({"login": "abc", "name": None}) is None
+    assert user_display_name({"login": "abc", "name": "ABC"}) is None
+
+
+async def test_fetch_github_names_reads_cache_offline(tmp_path):
+    from lineage.ingest.github import fetch_github_names
+
+    d = tmp_path / "github" / "users"
+    d.mkdir(parents=True)
+    (d / "viicos.json").write_text(json.dumps({"login": "viicos", "name": "Victorien Plot"}))
+    names = await fetch_github_names(["Viicos", "missing"], tmp_path, headers={}, offline=True)
+    assert names == {"viicos": "Victorien Plot"}
