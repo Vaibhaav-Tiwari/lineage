@@ -546,3 +546,21 @@ MATCH (p:PEP)-[:CONCERNS]->(:Area)<-[e:EXPERT_IN]-(x:Person)
 WHERE p.id IN $ids AND (e.inactive IS NULL OR e.inactive = false)
 RETURN p.id AS pep, p.title AS title, collect(DISTINCT coalesce(x.github, x.name)) AS owners
 """
+
+# --- Ownership drift: declared (Experts Index) vs revealed (commits) -------------
+
+TRACKED_AREAS = "MATCH (:Person)-[:COMMITTED_TO]->(a:Area) RETURN DISTINCT a.id AS id"
+
+DRIFT_DECLARED = """
+MATCH (p:Person)-[e:EXPERT_IN]->(a:Area)
+WHERE a.id IN $areas
+RETURN a.id AS area_id, a.name AS area, coalesce(p.github, p.id) AS who, coalesce(e.inactive, false) AS inactive
+"""
+
+DRIFT_REVEALED = """
+MATCH (p:Person)-[c:COMMITTED_TO]->(a:Area)
+WHERE a.id IN $areas
+RETURN a.id AS area_id, a.name AS area, coalesce(p.github, p.id) AS who, c.count AS commits, c.last_at AS last_at
+"""
+
+AREA_NAMES = "MATCH (a:Area) WHERE a.id IN $areas RETURN a.id AS id, a.name AS name"
