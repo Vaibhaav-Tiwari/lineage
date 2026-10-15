@@ -149,3 +149,12 @@ def test_footnotes_are_renumbered_when_an_unseen_citation_is_dropped():
 
     text = "A happened.[1] B happened.[2] C happened.[3][2]"
     assert _renumber(text, ["pep:1", "bogus:x", "pep:3"], ["pep:1", "pep:3"]) == "A happened.[1] B happened. C happened.[2]"
+
+
+def test_a_bare_number_is_read_as_a_pep_number():
+    from lineage.agents.historian import _normalise
+
+    assert _normalise("900") == "Tell me about PEP 900."
+    assert _normalise(" #455? ") == "Tell me about PEP 455."
+    assert _normalise("PEP 455") == "PEP 455"
+    assert _normalise("what changed in 2020") == "what changed in 2020"

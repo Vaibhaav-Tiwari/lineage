@@ -155,8 +155,17 @@ def _prompt(question: str, as_of: date | None, context: list[dict] | None, focus
     return "\n\n".join(parts)
 
 
+def _normalise(question: str) -> str:
+    """A question that is only a number ("455", "#455") means that PEP."""
+    import re
+
+    m = re.fullmatch(r"\s*#?\s*(\d{1,4})\s*\??\s*", question)
+    return f"Tell me about PEP {int(m.group(1))}." if m else question
+
+
 async def ask(question: str, *, company_g, agent_g, user_g, llm, embedder, as_of: date | None = None,
               context: list[dict] | None = None, focus: str | None = None) -> AskResult:
+    question = _normalise(question)
     prompt = _prompt(question, as_of, context, focus)
     session = ToolSession(company_g, embedder, as_of)
     if hasattr(llm, "run_session"):  # backends that drive their own loop (Agent SDK, graph-only)
