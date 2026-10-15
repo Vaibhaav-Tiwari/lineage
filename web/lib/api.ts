@@ -122,6 +122,21 @@ export function expandMore(f: Fragment, moreId: string): Fragment {
   return mergeFragments(rest, m.props.hidden as Fragment);
 }
 
+/** A source written for people, for the numbered notes under an answer. */
+export function citationLabel(n: GNode | undefined, id: string): string {
+  if (!n) return id;
+  const p = n.props ?? {};
+  const word: Record<string, string> = { accept: "Acceptance", reject: "Rejection", supersede: "Supersession", withdraw: "Withdrawal" };
+  switch (n.label) {
+    case "PEP": return `PEP ${p.number ?? id.split(":")[1]}${p.title ? `, ${p.title}` : ""}`;
+    case "Decision": return `${word[p.kind] ?? "Decision"} of PEP ${id.split(":")[2]}${p.at ? `, ${String(p.at).slice(0, 10)}` : ""}`;
+    case "Post": return `Forum post #${p.post_number ?? ""}${p.created ? `, ${String(p.created).slice(0, 10)}` : ""}`;
+    case "PR": return `Pull request ${id.split(":")[1]}${p.title ? `, ${p.title}` : ""}`;
+    case "Chunk": return `Passage${p.heading ? ` "${p.heading}"` : ""}`;
+    default: return nodeTitle(n);
+  }
+}
+
 export function nodeDetail(n: GNode): string {
   const p = n.props ?? {};
   switch (n.label) {

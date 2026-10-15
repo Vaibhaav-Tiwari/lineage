@@ -142,3 +142,10 @@ async def test_abstention_explains_what_to_try(db):
         assert r.abstained and "PEP number" in r.text
     finally:
         await _cleanup(cg, ag, ug)
+
+
+def test_footnotes_are_renumbered_when_an_unseen_citation_is_dropped():
+    from lineage.agents.historian import _renumber
+
+    text = "A happened.[1] B happened.[2] C happened.[3][2]"
+    assert _renumber(text, ["pep:1", "bogus:x", "pep:3"], ["pep:1", "pep:3"]) == "A happened.[1] B happened. C happened.[2]"

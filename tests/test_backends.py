@@ -98,3 +98,23 @@ async def test_graph_only_reports_status_as_of_the_requested_date(db):
         assert "Accepted" in r.text and "Superseded" not in r.text.split(".")[0]
     finally:
         await _cleanup(cg, ag, ug)
+
+
+async def test_graph_only_marks_each_claim_with_its_footnote(db):
+    import re
+
+    cg, ag, ug = await _graphs(db)
+    try:
+        for q in ("Who announced the acceptance of PEP 102?", "Who should I ask about argparse these days?"):
+            r = await ask(q, company_g=cg, agent_g=ag, user_g=None, llm=GraphOnlyLLM(), embedder=FakeEmbedder())
+            marks = [int(m) for m in re.findall(r"\[(\d+)\]", r.text)]
+            assert marks, r.text
+            assert all(1 <= m <= len(r.citations) for m in marks)
+    finally:
+        await _cleanup(cg, ag, ug)
+
+
+def test_historian_prompt_asks_for_footnote_markers():
+    from lineage.agents.historian import SYSTEM
+
+    assert "[1]" in SYSTEM

@@ -365,3 +365,16 @@ a { color: var(--cyan); }
 .topic-note { display: flex; flex-wrap: wrap; gap: 0.2rem 0.6rem; align-items: baseline; }
 .linkish { background: none; border: 0; padding: 0; color: var(--ink-soft); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; font: inherit; }
 .linkish:hover { color: var(--ink); }
+
+/* answers as a scholarly edition: note numbers in the text, sources listed underneath */
+sup.fn { line-height: 0; }
+sup.fn button { background: none; border: 0; padding: 0 0 0 1px; cursor: pointer; font-family: var(--typed); font-size: 0.7em; color: var(--cyan); }
+sup.fn button:hover { text-decoration: underline; }
+.notes { list-style: none; margin: 0.55rem 0 0; padding: 0.45rem 0 0; border-top: 1px solid var(--rule); display: grid; gap: 0.1rem; font-size: var(--step--1); }
+.notes li { display: grid; grid-template-columns: 1.2rem 1fr; align-items: baseline; }
+.notes .n { font-family: var(--typed); font-size: 0.8em; color: var(--ink-faint); }
+.notes button { background: none; border: 0; padding: 0; text-align: left; cursor: pointer; color: var(--ink-soft); line-height: 1.45; }
+.notes button:hover, .notes button[aria-pressed="true"] { color: var(--ink); }
+.notes button .typed { color: var(--ink-faint); font-size: 0.78em; margin-left: 0.2rem; }
+.notes li.stale button { color: var(--ink-faint); }
+.notes li.stale button .typed { text-decoration: line-through; text-decoration-color: var(--stamp); }

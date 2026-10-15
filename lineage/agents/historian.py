@@ -28,7 +28,11 @@ know which PEP is involved; for HOW IS X CONNECTED TO Y, connection. You have at
 
 Finish by calling submit_answer with a short, direct answer (2-6 sentences, name people and dates), the ids \
 you rely on, and 1-3 beliefs you concluded with the ids each rests on and an honest confidence. If the tools \
-do not contain the answer, submit an answer saying so with no citations - never guess."""
+do not contain the answer, submit an answer saying so with no citations - never guess.
+
+Mark each claim in the text with footnote numbers that point into your citations list, 1-based, right after \
+the sentence's punctuation: "PEP 649 was accepted on 2023-05-08.[1] Gregory P. Smith announced it.[2]" means \
+citations[0] backs the first sentence and citations[1] the second. Every number must refer to a citation."""
 
 
 @dataclass
@@ -162,6 +166,19 @@ async def ask(question: str, *, company_g, agent_g, user_g, llm, embedder, as_of
     return await _finish(question, session, company_g, agent_g, user_g, as_of, usage)
 
 
+def _renumber(text: str, original: list[str], kept: list[str]) -> str:
+    """Point footnote markers at the citations that survived; drop markers whose citation was dropped."""
+    import re
+
+    def sub(m: re.Match) -> str:
+        i = int(m.group(1)) - 1
+        ref = original[i] if 0 <= i < len(original) else None
+        return f"[{kept.index(ref) + 1}]" if ref in kept else ""
+
+    out = re.sub(r"\[(\d+)\]", sub, text)
+    return re.sub(r"(\[\d+\])(?:\1)+", r"\1", out)  # [2][2] -> [2]
+
+
 async def _finish(question, session: ToolSession, company_g, agent_g, user_g, as_of, usage) -> AskResult:
     submitted, seen = session.submitted, session.union.ids()
     cited = [c for c in dict.fromkeys((submitted or {}).get("citations") or []) if c in seen]
@@ -173,6 +190,8 @@ async def _finish(question, session: ToolSession, company_g, agent_g, user_g, as
         ev = [x for x in b.get("evidence") or [] if x in seen]
         if ev and b.get("text"):
             beliefs.append({"text": b["text"], "evidence": ev, "confidence": float(b.get("confidence", 0.5))})
+    original = list(dict.fromkeys((submitted or {}).get("citations") or []))
+    submitted["text"] = _renumber(submitted.get("text", ""), original, cited)
     answer_id = await record_answer(agent_g, question, submitted.get("text", ""), cited, beliefs, as_of)
     if user_g is not None:
         areas = [r["id"] for r in await ro(company_g, Q.AREAS_OF_PEPS, {"ids": [c for c in cited if c.startswith("pep:")]})]

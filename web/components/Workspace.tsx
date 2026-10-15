@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { api, AskResult, capFanout, EventRow, expandMore, Fragment, GNode, mergeFragments, sharesTopic, StewardReport } from "@/lib/api";
 import TimeRail from "./TimeRail";
+import AnswerText from "./AnswerText";
 import IndexCard from "./IndexCard";
 import GraphKey from "./GraphKey";
 import Tip from "./Tip";
@@ -247,20 +248,15 @@ export default function Workspace() {
                   {e.error && <p className="a-note">{e.error}</p>}
                   {e.result && (
                     <>
-                      <p className="a">{e.stale ? <span className="struck">{e.result.text}</span> : e.result.text}</p>
+                      <AnswerText text={e.result.text} citations={e.result.citations} nodes={e.result.evidence.nodes}
+                                  struck={!!e.stale} stale={stale} selected={selected} onPick={setSelected}>
                       {e.stale && (
                         <p className="margin-note">
                           No longer true{e.stale.at && <> as of <span className="typed">{e.stale.at}</span></>}. {e.stale.note}{" "}
                           <button className="linkish stamp-link" disabled={busy} onClick={() => ask(e.q, null)}>Ask again with today&rsquo;s facts</button>
                         </p>
                       )}
-                      <div className="chips">
-                        {e.result.citations.map((c) => (
-                          <Tip key={c} text={stale.has(c) ? "No longer current. Click to see it in the graph." : "Evidence for this answer. Click to show it in the graph and open its card."}>
-                            <button className={`chip ${stale.has(c) ? "stale" : ""}`} aria-pressed={selected === c} onClick={() => setSelected(c)}>{c}</button>
-                          </Tip>
-                        ))}
-                      </div>
+                      </AnswerText>
                       {e.result.miss && e.result.miss.actions.length > 0 && (
                         <div className="miss-actions">
                           {e.result.miss.actions.map((a) => (

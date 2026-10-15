@@ -67,6 +67,19 @@ class ClaudeCodeLLM:
         return usage
 
 
+class _Footnotes:
+    """Numbers citations in the order they are first used, so "[n]" in the text points at citations[n-1]."""
+
+    def __init__(self):
+        self.ids: list[str] = []
+
+    def mark(self, *ids: str) -> str:
+        for i in ids:
+            if i not in self.ids:
+                self.ids.append(i)
+        return "".join(f"[{self.ids.index(i) + 1}]" for i in dict.fromkeys(ids))
+
+
 class GraphOnlyLLM:
     """Deterministic: needs a PEP number or a module name in the question; otherwise it abstains."""
 
@@ -85,15 +98,16 @@ class GraphOnlyLLM:
             return False
         active = [e for e in experts if e.get("revealed")]
         listed = [e for e in experts if e.get("declared") and not e.get("revealed")]
+        fn = _Footnotes()
         parts = []
         if active:
             parts.append("Actually committing in the last 12 months: " +
-                         ", ".join(f"{e['name']} ({e.get('commits', 0)} commit{'' if e.get('commits') == 1 else 's'})" for e in active[:5]) + ".")
+                         ", ".join(f"{e['name']} ({e.get('commits', 0)} commit{'' if e.get('commits') == 1 else 's'}){fn.mark(e['id'])}"
+                                   for e in active[:5]) + ".")
         if listed:
-            parts.append("Listed as experts but not recently committing: " + ", ".join(e["name"] for e in listed[:5]) + ".")
+            parts.append("Listed as experts but not recently committing: " + ", ".join(f"{e['name']}{fn.mark(e['id'])}" for e in listed[:5]) + ".")
         area = session.union.meta.get("area", {})
-        session.submitted = {"text": f"For {area.get('name')}: " + " ".join(parts),
-                             "citations": [e["id"] for e in active[:5] + listed[:5]], "beliefs": []}
+        session.submitted = {"text": f"For {area.get('name')}: " + " ".join(parts), "citations": fn.ids, "beliefs": []}
         return True
 
     async def run_session(self, system: str, prompt: str, session, tool_specs) -> dict:
@@ -109,28 +123,24 @@ class GraphOnlyLLM:
         nodes = {n["id"]: n for n in frag.nodes}
         if f"pep:{pep}" not in nodes:
             return {"backend": "graph-only"}
-        cited = [f"pep:{pep}"]
-        lines = []
+        fn = _Footnotes()
+        # the tool's summary line already resolves the status as of the requested date
+        head = (frag.meta.get("summary") or "").split("\n")[0] or f"PEP {pep}"
+        lines = [f"{head}.{fn.mark(f'pep:{pep}')}"]
         for e in frag.edges:
             s, d = nodes.get(e["src"]), nodes.get(e["dst"])
             if not s or not d:
                 continue
             if e["type"] == "DECIDES" and d["id"] == f"pep:{pep}":
-                cited.append(s["id"])
-                lines.append(f"Decision: {s['props'].get('kind')} ({s['props'].get('at') or 'date unknown'}).")
+                lines.append(f"Decision: {s['props'].get('kind')} ({s['props'].get('at') or 'date unknown'}).{fn.mark(s['id'])}")
             elif e["type"] == "ANNOUNCED_BY":
-                cited.append(d["id"])
-                lines.append(f"Announced by {d['props'].get('name') or d['props'].get('github')}.")
+                lines.append(f"Announced by {d['props'].get('name') or d['props'].get('github')}.{fn.mark(d['id'])}")
             elif e["type"] == "SUPERSEDES":
-                cited += [s["id"], d["id"]]
-                lines.append(f"PEP {s['props'].get('number')} supersedes PEP {d['props'].get('number')}.")
+                lines.append(f"PEP {s['props'].get('number')} supersedes PEP {d['props'].get('number')}.{fn.mark(s['id'], d['id'])}")
             elif e["type"] == "AUTHORED" and d["id"] == f"pep:{pep}":
-                cited.append(s["id"])
-                lines.append(f"Author: {s['props'].get('name') or s['props'].get('github')}.")
-        # the tool's summary line already resolves the status as of the requested date
-        head = (frag.meta.get("summary") or "").split("\n")[0] or f"PEP {pep}"
-        text = f"{head}. " + " ".join(dict.fromkeys(lines))
-        session.submitted = {"text": text.strip(), "citations": list(dict.fromkeys(cited)), "beliefs": []}
+                lines.append(f"Author: {s['props'].get('name') or s['props'].get('github')}.{fn.mark(s['id'])}")
+        text = " ".join(dict.fromkeys(lines))
+        session.submitted = {"text": text.strip(), "citations": fn.ids, "beliefs": []}
         return {"backend": "graph-only"}
 
 
