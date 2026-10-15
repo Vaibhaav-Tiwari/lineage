@@ -63,7 +63,9 @@ export default function Workspace() {
     setQuestion("");
     setBusy(true);
     try {
-      const r = await api.ask(q, UID, asOf);
+      const context = entries.slice(-4).map((e) =>
+        e.kind === "steward" ? { note: `Steward: ${e.text}` } : { q: e.q, a: e.result?.text ?? "" });
+      const r = await api.ask(q, UID, asOf, context, selected);
       patchEntry(i, (e) => ({ ...e, result: r }));
       setLastMs(r.tool_trace.reduce((s, t) => s + t.ms, 0));
       if (!r.abstained && r.answer_id) {

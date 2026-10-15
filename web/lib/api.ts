@@ -35,8 +35,8 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  ask: (question: string, user_id: string, as_of: string | null) =>
-    call<AskResult>("/ask", { method: "POST", body: JSON.stringify({ question, user_id, as_of }) }),
+  ask: (question: string, user_id: string, as_of: string | null, context: Record<string, string>[] = [], focus: string | null = null) =>
+    call<AskResult>("/ask", { method: "POST", body: JSON.stringify({ question, user_id, as_of, context, focus }) }),
   node: (id: string) => call<any>(`/nodes/${encodeURIComponent(id)}`),
   events: () => call<EventRow[]>("/events"),
   apply: (slug: string) => call<StewardReport>(`/events/${slug}/apply`, { method: "POST" }),

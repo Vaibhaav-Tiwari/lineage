@@ -15,7 +15,8 @@ from lineage.graph.tools import TOOL_SPECS, decision_path, pep_timeline, related
 from lineage.memory.store import record_answer, record_episode
 
 MAX_TOOL_CALLS = 6
-ABSTAIN = "I couldn't find evidence in the graph for that."
+ABSTAIN = ("I couldn't find evidence in the graph for that. Try naming a PEP number, a Python module "
+           "or a person, for example: \"Who decided PEP 649?\" or \"Who should I ask about asyncio?\"")
 
 SYSTEM = """You are the Historian for the Python project's "company brain": a graph of PEPs (proposals), \
 decisions, the people who wrote and decided them, forum discussions, implementing pull requests, and who \
@@ -128,8 +129,29 @@ async def _manual_loop(llm, prompt: str, session: ToolSession) -> dict:
     return usage
 
 
-async def ask(question: str, *, company_g, agent_g, user_g, llm, embedder, as_of: date | None = None) -> AskResult:
-    prompt = question if not as_of else f"{question}\n\n(Answer as of {as_of.isoformat()}: ignore anything that happened later.)"
+def _prompt(question: str, as_of: date | None, context: list[dict] | None, focus: str | None) -> str:
+    """Follow-ups ("why was it decided this way?") need what's on screen: recent
+    exchanges, Steward notes, and the item the user has open. The question goes last."""
+    parts = []
+    lines = []
+    for c in (context or [])[-4:]:
+        if c.get("note"):
+            lines.append(f"- {c['note'][:500]}")
+        elif c.get("q"):
+            lines.append(f"- Earlier question: {c['q'][:300]}\n  Your answer: {(c.get('a') or '')[:600]}")
+    if lines:
+        parts.append("Conversation so far (use it to resolve words like 'it' or 'this'):\n" + "\n".join(lines))
+    if focus:
+        parts.append(f"The user currently has {focus} open.")
+    if as_of:
+        parts.append(f"Answer as of {as_of.isoformat()}: ignore anything that happened later.")
+    parts.append(f"Question: {question}")
+    return "\n\n".join(parts)
+
+
+async def ask(question: str, *, company_g, agent_g, user_g, llm, embedder, as_of: date | None = None,
+              context: list[dict] | None = None, focus: str | None = None) -> AskResult:
+    prompt = _prompt(question, as_of, context, focus)
     session = ToolSession(company_g, embedder, as_of)
     if hasattr(llm, "run_session"):  # backends that drive their own loop (Agent SDK, graph-only)
         usage = await llm.run_session(SYSTEM, prompt, session, TOOL_SPECS)

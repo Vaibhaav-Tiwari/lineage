@@ -117,3 +117,28 @@ async def test_tool_errors_are_reported_not_raised(db):
         assert r.tool_trace[0]["error"] and "error" not in r.tool_trace[1]
     finally:
         await _cleanup(cg, ag, ug)
+
+
+async def test_follow_up_carries_conversation_and_focus(db):
+    cg, ag, ug = await _graphs(db)
+    try:
+        llm = FakeLLM([call("decision_path", {"pep": 102}), submit("Because Bob said so.", ["pep:102"])])
+        ctx = [{"q": "Who announced PEP 102?", "a": "Bob announced it."}, {"note": "Steward: PEP 101 was superseded by PEP 102."}]
+        await ask("why was it decided this way?", company_g=cg, agent_g=ag, user_g=None, llm=llm,
+                  embedder=FakeEmbedder(), context=ctx, focus="pep:102")
+        first_prompt = llm.first_prompt
+        assert "Who announced PEP 102?" in first_prompt and "Bob announced it." in first_prompt
+        assert "Steward: PEP 101 was superseded" in first_prompt
+        assert "pep:102" in first_prompt and first_prompt.rstrip().endswith("why was it decided this way?")
+    finally:
+        await _cleanup(cg, ag, ug)
+
+
+async def test_abstention_explains_what_to_try(db):
+    cg, ag, ug = await _graphs(db)
+    try:
+        llm = FakeLLM([submit("No idea.", [])])
+        r = await ask("why?", company_g=cg, agent_g=ag, user_g=None, llm=llm, embedder=FakeEmbedder())
+        assert r.abstained and "PEP number" in r.text
+    finally:
+        await _cleanup(cg, ag, ug)

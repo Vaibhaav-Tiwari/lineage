@@ -40,6 +40,8 @@ class AskBody(BaseModel):
     question: str
     user_id: str | None = None
     as_of: date | None = None
+    context: list[dict] = []   # recent {q, a} exchanges and {note} Steward messages
+    focus: str | None = None   # id of the item the user has open
 
     @field_validator("user_id")
     @classmethod
@@ -150,7 +152,8 @@ def create_app(prefix: str = "lineage", llm_factory: Callable | None = None, emb
         user_g = await st.user_graph(body.user_id, hdb) if body.user_id else None
         r = await ask(body.question, company_g=hdb.select_graph(st.name("company")),
                       agent_g=hdb.select_graph(st.name("agent", "historian")), user_g=user_g,
-                      llm=st.llm(), embedder=st.embedder, as_of=body.as_of)
+                      llm=st.llm(), embedder=st.embedder, as_of=body.as_of,
+                      context=body.context[-4:], focus=body.focus)
         return r.to_json()
 
     @app.get("/beliefs")

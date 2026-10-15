@@ -60,9 +60,12 @@ class FakeLLM:
         self.turns = list(turns)
         self.calls = 0
         self.last_tool_results: list[dict] = []
+        self.first_prompt: str | None = None
 
     async def complete(self, system: str, messages: list, tools: list) -> LLMTurn:
         self.calls += 1
+        if self.first_prompt is None and messages and isinstance(messages[0]["content"], str):
+            self.first_prompt = messages[0]["content"]
         last = messages[-1]["content"] if messages else None
         if isinstance(last, list) and last and isinstance(last[0], dict) and last[0].get("type") == "tool_result":
             self.last_tool_results = last
