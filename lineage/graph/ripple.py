@@ -14,7 +14,7 @@ from lineage.graph.tools import _fragment
 _SOFT = {1: Q.RIPPLE_SOFT_1, 2: Q.RIPPLE_SOFT_2, 3: Q.RIPPLE_SOFT_3}
 
 
-async def company_ripple(g, changed_ids: list[str], reason: str, depth: int = 2) -> dict:
+async def company_ripple(g, changed_ids: list[str], reason: str, depth: int = 1) -> dict:
     changed = sorted(set(changed_ids))
     superseders = [r["id"] for r in await ro(g, Q.SUPERSEDERS, {"changed": changed})]
     soft = sorted(r["id"] for r in await ro(g, _SOFT[max(1, min(depth, 3))], {"changed": changed, "exclude": superseders}))

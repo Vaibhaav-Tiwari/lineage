@@ -88,3 +88,11 @@ def test_tool_specs_cover_all_tools():
     names = {t["name"] for t in TOOL_SPECS}
     assert names == {"search", "decision_path", "pep_timeline", "who_knows", "related_peps", "submit_answer"}
     assert all("input_schema" in t and "description" in t for t in TOOL_SPECS)
+
+
+async def test_unapplied_events_are_invisible_to_the_historian(g):
+    await _setup(g)
+    await rw(g, "MATCH (e:Event) SET e.applied = false")
+    f = await pep_timeline(g, 101)
+    assert not any(t["kind"].startswith("event:") for t in f.meta["timeline"])
+    assert "event:pep-101-superseded" not in (await decision_path(g, 101)).ids()

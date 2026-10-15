@@ -19,7 +19,7 @@ async def _company(g):
 
 async def test_ripple_hard_soft_and_chunks(g):
     await _company(g)
-    r = await company_ripple(g, ["pep:101"], "PEP 101 superseded by PEP 102")
+    r = await company_ripple(g, ["pep:101"], "PEP 101 superseded by PEP 102", depth=2)
     assert r["hard"] == ["pep:101"]
     assert r["soft"] == ["pep:103", "pep:104"]  # 105 is 3 hops away; 102 is the superseder
     assert r["chunks"] == ["c1", "c2"]

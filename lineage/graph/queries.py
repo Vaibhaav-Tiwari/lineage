@@ -309,6 +309,7 @@ PEP_NODE = "MATCH (p:PEP {id: $id}) RETURN properties(p) AS p"
 # Who/what points at the PEP: decisions, authors, delegates, implementing PRs, events.
 INTO_PEP = """
 MATCH (a)-[r:DECIDES|AUTHORED|DELEGATE_FOR|IMPLEMENTS|AFFECTS]->(b:PEP {id: $id})
+WHERE NOT a:Event OR coalesce(a.applied, true) = true   // replay events stay hidden until applied
 """ + _TRIPLE + " LIMIT 100"
 
 # Where each decision was recorded and who announced it.
