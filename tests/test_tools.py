@@ -96,3 +96,19 @@ async def test_unapplied_events_are_invisible_to_the_historian(g):
     f = await pep_timeline(g, 101)
     assert not any(t["kind"].startswith("event:") for t in f.meta["timeline"])
     assert "event:pep-101-superseded" not in (await decision_path(g, 101)).ids()
+
+
+async def test_who_knows_orders_by_commit_volume_then_recency(g):
+    await _setup(g)
+    await rw(g, """MATCH (a:Area {id:'area:argparse'})
+                   CREATE (:Person {id:'person:big', github:'big'})-[:COMMITTED_TO {count:9, last_at:date('2026-01-01')}]->(a),
+                          (:Person {id:'person:recent', github:'recent'})-[:COMMITTED_TO {count:1, last_at:date('2026-09-01')}]->(a)""")
+    f = await who_knows(g, "argparse")
+    assert [e["id"] for e in f.meta["experts"]][:3] == ["person:big", "person:dave", "person:recent"]
+
+
+async def test_status_as_of_with_real_event_payload_shape(g):
+    await _setup(g)
+    await rw(g, """MATCH (e:Event) SET e.payload_json = '{"slug": "pep-101-superseded", "at": "2020-05-01", "before_status": "Accepted", "after_status": "Superseded", "pep": 101}'""")
+    f = await decision_path(g, 101, as_of=date(2020, 1, 1))
+    assert "status Accepted" in f.meta["summary"]

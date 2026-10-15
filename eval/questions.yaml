@@ -1,0 +1,67 @@
+# Ground truth verified against lineage:company on 2026-10-15 (Python project public data).
+# A fact passes if ANY of its alternatives appears in the answer (case-insensitive).
+# expected_ids: graph ids a good answer should cite (citation recall).
+questions:
+  - q: Who announced the acceptance of PEP 649, and when?
+    facts: [["Gregory P. Smith", "gpshead"], ["2023-05-08", "May 8, 2023", "8 May 2023"]]
+    expected_ids: [pep:649, person:gpshead, decision:pep:649:accept]
+  - q: Who announced that PEP 695, the type parameter syntax, was accepted?
+    facts: [["Emily Morehouse"]]
+    expected_ids: [pep:695, person:emilyemorehouse]
+  - q: Who announced the decision on PEP 701?
+    facts: [["Thomas Wouters", "Yhg1s"]]
+    expected_ids: [pep:701, person:yhg1s]
+  - q: When was PEP 749 accepted, and who announced it?
+    facts: [["Barry Warsaw", "warsaw"], ["2025-05-05", "May 5, 2025", "5 May 2025"]]
+    expected_ids: [pep:749, person:warsaw]
+  - q: Who announced the acceptance of PEP 688?
+    facts: [["Pablo Galindo"]]
+    expected_ids: [pep:688, person:pablogsal]
+  - q: Who announced that PEP 692 was accepted?
+    facts: [["Brett Cannon"]]
+    expected_ids: [pep:692, person:brettcannon]
+  - q: Who accepted PEP 740?
+    facts: [["Donald Stufft", "dstufft"]]
+    expected_ids: [pep:740, person:dstufft]
+  - q: Who wrote PEP 572, assignment expressions?
+    facts: [["Chris Angelico"], ["Guido"], ["Tim Peters"]]
+    expected_ids: [pep:572]
+  - q: Who are the authors of PEP 484, type hints?
+    facts: [["Guido"], ["Jukka Lehtosalo"], ["Łukasz Langa", "Lukasz Langa"]]
+    expected_ids: [pep:484, person:gvanrossum]
+  - q: Which PEP superseded PEP 241?
+    facts: [["314"]]
+    expected_ids: [pep:241, pep:314]
+  - q: Which PEP superseded PEP 5, the guidelines for language evolution?
+    facts: [["387"]]
+    expected_ids: [pep:5, pep:387]
+  - q: What superseded PEP 345, metadata for Python software packages 1.2?
+    facts: [["566"]]
+    expected_ids: [pep:345, pep:566]
+  - q: Who wrote PEP 634 on structural pattern matching?
+    facts: [["Brandt Bucher"], ["Guido"]]
+    expected_ids: [pep:634, person:brandtbucher]
+  - q: Who wrote PEP 20, the Zen of Python?
+    facts: [["Tim Peters", "tim-one"]]
+    expected_ids: [pep:20, person:tim-one]
+  - q: Who should I ask about asyncio today? Who is actually committing to it?
+    facts: [["deadlovelll"], ["kumaraditya303", "Kumar Aditya"]]
+    expected_ids: [person:kumaraditya303]
+  - q: Who is actively working on the typing module right now?
+    facts: [["JelleZijlstra", "Jelle Zijlstra", "jellezijlstra"]]
+    expected_ids: [person:jellezijlstra]
+  - q: What was the status of PEP 563 in mid-2020?
+    as_of: "2020-06-01"
+    facts: [["Accepted"]]
+    expected_ids: [pep:563]
+  - q: How does Rust's borrow checker handle lifetimes?
+    expect_abstain: true
+  - q: What is the population of Paris?
+    expect_abstain: true
+  - q: Which JavaScript framework did the Steering Council pick for the python.org website redesign?
+    expect_abstain: true
+
+# For the replayable event: PEPs whose text directly cites PEP 563 (hand-checked list).
+ripple:
+  event: pep-563-superseded
+  expected_soft: [pep:484, pep:537, pep:585, pep:604, pep:671, pep:690, pep:695, pep:781]

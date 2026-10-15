@@ -68,7 +68,7 @@ def _events(f: Fragment) -> list[dict]:
     for n in f.nodes:
         if n["label"] == "Event" and n["props"].get("payload_json"):
             payload = json.loads(n["props"]["payload_json"])
-            out.append({"at": date.fromisoformat(n["props"]["at"]), **payload})
+            out.append({**payload, "at": date.fromisoformat(n["props"]["at"])})
     return out
 
 
@@ -85,11 +85,12 @@ async def decision_path(g, pep: int, as_of: date | None = None) -> Fragment:
     rows = []
     for cypher in (Q.INTO_PEP, Q.DECISION_PROVENANCE, Q.SUPERSEDE_CHAIN, Q.PEP_THREADS):
         rows += await ro(g, cypher, {"id": pid})
+    # events are read before the as_of filter: an event dated after as_of carries the earlier status
+    status = status_as_of(p, _events(_fragment(rows)), as_of)
     f = _fragment(rows, as_of)
     f.nodes.append({"id": pid, "label": "PEP", "props": p})
     f = f.merge(Fragment())
     by_id = {n["id"]: n for n in f.nodes}
-    status = status_as_of(p, _events(f), as_of)
     lines = [f"PEP {pep}: {p.get('title')} — status {status}" + (f" (as of {as_of})" if as_of else "")]
     for e in f.edges:
         s, d = by_id.get(e["src"]), by_id.get(e["dst"])
@@ -146,7 +147,8 @@ async def who_knows(g, topic: str, as_of: date | None = None) -> Fragment:
     for p in people.values():
         p["source"] = "both" if p["declared"] and p["revealed"] else "declared" if p["declared"] else "revealed"
     experts = list(people.values())
-    experts.sort(key=lambda p: (p["revealed"], p.get("last_at") or ""), reverse=True)
+    # most active first: revealed contributors by commit volume, then recency; then listed-only experts
+    experts.sort(key=lambda p: (p["revealed"], p.get("commits") or 0, p.get("last_at") or ""), reverse=True)
     f.meta = {"area": area, "experts": experts,
               "summary": f"Area {area['name']}: " + "; ".join(f"{p['name']} ({p['source']})" for p in experts)}
     return f

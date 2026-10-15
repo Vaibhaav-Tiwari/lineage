@@ -655,3 +655,12 @@ RETURN b.id AS id, b.text AS text, b.status AS status, b.confidence AS confidenc
 """
 
 DELETE_CONCERNS = "MATCH (:PEP)-[r:CONCERNS]->(:Area) DELETE r"
+
+# Graph-only backend: which known module names appear in a question.
+AREAS_NAMED_IN = """
+MATCH (a:Area)
+WHERE size(a.name) >= 4 AND toLower($q) CONTAINS toLower(a.name)
+RETURN a.name AS name
+ORDER BY size(a.name) DESC
+LIMIT 1
+"""

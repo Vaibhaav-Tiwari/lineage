@@ -13,6 +13,7 @@ import re
 from lineage.config import settings
 
 _PEP = re.compile(r"\bPEP[\s-]*(\d{1,4})\b", re.I)
+_WHO = re.compile(r"\bwho\b.*\b(ask|work|working|maintain|maintains|owns|own|knows|expert|committing|active)", re.I)
 
 
 def build_sdk_tools(session) -> list:
@@ -67,15 +68,42 @@ class ClaudeCodeLLM:
 
 
 class GraphOnlyLLM:
+    """Deterministic: needs a PEP number or a module name in the question; otherwise it abstains."""
+
+    async def _who(self, prompt: str, session) -> bool:
+        from lineage.db import ro
+        from lineage.graph import queries as Q
+
+        if not _WHO.search(prompt):
+            return False
+        found = await ro(session.company_g, Q.AREAS_NAMED_IN, {"q": prompt})
+        if not found:
+            return False
+        await session.call("who_knows", {"topic": found[0]["name"]})
+        experts = session.union.meta.get("experts") or []
+        if not experts:
+            return False
+        active = [e for e in experts if e.get("revealed")]
+        listed = [e for e in experts if e.get("declared") and not e.get("revealed")]
+        parts = []
+        if active:
+            parts.append("Actually committing in the last 12 months: " +
+                         ", ".join(f"{e['name']} ({e.get('commits', 0)} commit{'' if e.get('commits') == 1 else 's'})" for e in active[:5]) + ".")
+        if listed:
+            parts.append("Listed as experts but not recently committing: " + ", ".join(e["name"] for e in listed[:5]) + ".")
+        area = session.union.meta.get("area", {})
+        session.submitted = {"text": f"For {area.get('name')}: " + " ".join(parts),
+                             "citations": [e["id"] for e in (active + listed)[:8]], "beliefs": []}
+        return True
+
     async def run_session(self, system: str, prompt: str, session, tool_specs) -> dict:
-        m = _PEP.search(prompt)
-        pep = int(m.group(1)) if m else None
-        if pep is None:
-            await session.call("search", {"query": prompt, "k": 3})
-            hits = session.union.meta.get("hits") or []
-            pep = int(hits[0]["pep_id"].split(":")[1]) if hits else None
-        if pep is None:
+        question = prompt.rsplit("Question:", 1)[-1]
+        if await self._who(question, session):
             return {"backend": "graph-only"}
+        m = _PEP.search(question)
+        if not m:
+            return {"backend": "graph-only"}  # no PEP and no module named: abstain rather than guess
+        pep = int(m.group(1))
         await session.call("decision_path", {"pep": pep})
         frag = session.union
         nodes = {n["id"]: n for n in frag.nodes}
@@ -99,8 +127,9 @@ class GraphOnlyLLM:
             elif e["type"] == "AUTHORED" and d["id"] == f"pep:{pep}":
                 cited.append(s["id"])
                 lines.append(f"Author: {s['props'].get('name') or s['props'].get('github')}.")
-        p = nodes[f"pep:{pep}"]["props"]
-        text = f"PEP {pep} ({p.get('title')}), status {p.get('status')}. " + " ".join(dict.fromkeys(lines))
+        # the tool's summary line already resolves the status as of the requested date
+        head = (frag.meta.get("summary") or "").split("\n")[0] or f"PEP {pep}"
+        text = f"{head}. " + " ".join(dict.fromkeys(lines))
         session.submitted = {"text": text.strip(), "citations": list(dict.fromkeys(cited)), "beliefs": []}
         return {"backend": "graph-only"}
 
