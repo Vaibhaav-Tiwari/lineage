@@ -501,3 +501,48 @@ RETURN [n IN nodes(p) | n.id] AS path, true AS stale, null AS status,
 ORDER BY length(p) DESC
 LIMIT 1
 """
+
+# --- Shared coordination board (lineage:shared) ------------------------------------
+
+UPSERT_FIX_TASKS = """
+UNWIND $rows AS r
+MERGE (t:FixTask {id: r.id})
+ON CREATE SET t.status = 'open', t.created_at = $now, t.kind = r.kind, t.target_ref = r.target_ref,
+              t.reason = r.reason, t.suggested = r.suggested
+RETURN t.id AS id
+"""
+
+# Atomic claim. One query = one atomic unit, and FalkorDB serialises writes per
+# graph, so two agents can never claim the same task (no locks needed).
+CLAIM_NEXT = """
+MATCH (t:FixTask)
+WHERE t.status = 'open' OR (t.status = 'claimed' AND t.claim_until <= $now)
+WITH t ORDER BY t.created_at, t.id LIMIT 1
+SET t.status = 'claimed', t.claimed_by = $agent, t.claim_until = $until
+MERGE (a:Agent {name: $agent})
+MERGE (a)-[c:CLAIMED]->(t)
+SET c.until = $until
+RETURN t.id AS id, t.kind AS kind, t.target_ref AS target_ref, t.reason AS reason, t.suggested AS suggested
+"""
+
+COMPLETE_TASK = """
+MATCH (t:FixTask {id: $id})
+WHERE t.claimed_by = $agent AND t.status = 'claimed'
+SET t.status = 'done', t.done_at = $now
+RETURN t.id AS id
+"""
+
+LIST_TASKS = """
+MATCH (t:FixTask)
+WHERE $status IS NULL OR t.status = $status
+RETURN t.id AS id, t.kind AS kind, t.target_ref AS target_ref, t.reason AS reason, t.status AS status,
+       t.claimed_by AS claimed_by, t.suggested AS suggested, t.created_at AS created_at
+ORDER BY t.created_at, t.id
+"""
+
+# Who should review a PEP: active listed experts of the areas it concerns.
+AREA_OWNERS_OF_PEPS = """
+MATCH (p:PEP)-[:CONCERNS]->(:Area)<-[e:EXPERT_IN]-(x:Person)
+WHERE p.id IN $ids AND (e.inactive IS NULL OR e.inactive = false)
+RETURN p.id AS pep, p.title AS title, collect(DISTINCT coalesce(x.github, x.name)) AS owners
+"""
