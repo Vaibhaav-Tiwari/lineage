@@ -61,6 +61,11 @@ class AgentBody(BaseModel):
     agent: str
 
 
+class IntroBody(BaseModel):
+    person_id: str
+    area_id: str
+
+
 class WhatIfBody(BaseModel):
     person_id: str | None = None
     person_ids: list[str] = []
@@ -87,6 +92,9 @@ class State:
             self.db = await get_db()
             for a in AGENTS:
                 await ensure_agent_schema(self.db.select_graph(self.name("agent", a)))
+            from lineage.graph.udf import ensure_udfs
+
+            await ensure_udfs(self.db)  # JavaScript UDFs are server-wide; (re)load them as admin
             # ACL users live in memory only, so (re)create them on every start
             self.hist_user, pw = f"{self.prefix}_historian", secrets.token_urlsafe(24)
             await create_acl_user(self.db, self.hist_user, pw,
@@ -274,6 +282,18 @@ def create_app(prefix: str = "lineage", llm_factory: Callable | None = None, emb
         return {"done": tid}
 
     # --- Org: ownership drift + what-if ------------------------------------------------
+
+    @app.get("/org/health")
+    async def health_of_modules():
+        from lineage.graph.ownership import module_health
+
+        return await module_health(st.db.select_graph(st.name("company")))
+
+    @app.post("/org/introduce")
+    async def introduce(body: IntroBody):
+        from lineage.graph.ownership import introduction
+
+        return await introduction(st.db.select_graph(st.name("company")), body.person_id, body.area_id)
 
     @app.get("/org/drift")
     async def drift():

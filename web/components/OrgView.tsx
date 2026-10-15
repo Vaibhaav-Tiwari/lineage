@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import type { Fragment } from "@/lib/api";
 import Tip from "./Tip";
+import Introduce from "./Introduce";
 import WhatIf from "./WhatIf";
 
 export default function OrgView({ onShowGraph }: { onShowGraph: (f: Fragment, title: string, focus: string | null) => void }) {
@@ -11,10 +12,12 @@ export default function OrgView({ onShowGraph }: { onShowGraph: (f: Fragment, ti
   const [w, setW] = useState<any>(null);
   const [err, setErr] = useState<string | null>(null);
   const [clusters, setClusters] = useState<any[]>([]);
+  const [health, setHealth] = useState<Record<string, any>>({});
 
   useEffect(() => {
     api.drift().then(setAreas).catch(() => setErr("Could not reach the API."));
     api.clusters().then(setClusters).catch(() => {});
+    api.health().then((rows) => setHealth(Object.fromEntries(rows.map((r) => [r.area_id, r])))).catch(() => {});
   }, []);
   const lost = new Set<string>(w?.orphaned_areas ?? []);
   const risk = new Set<string>((w?.at_risk_areas ?? []).map((a: any) => a.area));
@@ -35,6 +38,7 @@ export default function OrgView({ onShowGraph }: { onShowGraph: (f: Fragment, ti
       </div>
 
       <WhatIf onResult={setW} onShowGraph={onShowGraph} />
+      <Introduce areas={areas} onShowGraph={onShowGraph} />
       {err && <p className="a-note">{err}</p>}
       <p className="trace" style={{ marginBottom: "0.8rem" }}>
         {counts.healthy ?? 0} healthy, {counts.drifting ?? 0} drifting, {counts.orphaned ?? 0} orphaned, out of {areas.length} modules with commit data.
@@ -51,6 +55,17 @@ export default function OrgView({ onShowGraph }: { onShowGraph: (f: Fragment, ti
                 {lost.has(a.area) ? "would be orphaned" : risk.has(a.area) ? "would rest on one person" : a.status}
               </div>
               <p className="tile-plain">{a.plain}</p>
+              {health[a.area_id] && (
+                <Tip text="Truck factor: the fewest people who together hold half of this module's recent knowledge. Recent commits count more: each commit's weight halves every six months, computed inside FalkorDB by a JavaScript UDF.">
+                  <p className="tile-plain truck" tabIndex={0}>
+                    {health[a.area_id].truck_factor === 1
+                      ? <>Truck factor 1: <strong>{health[a.area_id].owners[0].name}</strong> holds {Math.round(health[a.area_id].owners[0].share * 100)}% of the recent work.</>
+                      : health[a.area_id].truck_factor <= 3
+                        ? <>Truck factor {health[a.area_id].truck_factor}: {health[a.area_id].owners.slice(0, health[a.area_id].truck_factor).map((o: any) => o.name).join(", ").replace(/, ([^,]*)$/, " and $1")} hold half of the recent work.</>
+                        : <>Truck factor {health[a.area_id].truck_factor}: no small group holds most of the recent work.</>}
+                  </p>
+                </Tip>
+              )}
               <div className="people">
                 {everyone.map((p: any) => (
                   <Tip key={p} text={listed.has(p) ? (committing.has(p) ? "Listed as an owner and committing in the last 12 months." : "Listed as an owner, but no commits in the last 12 months.") : "Committing regularly, but not listed as an owner."}>

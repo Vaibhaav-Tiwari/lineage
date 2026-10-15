@@ -24,9 +24,12 @@ def aggregate_commits(commits: list[dict], area: str) -> list[dict]:
             continue
         login = login.lower()
         day = c["commit"]["author"]["date"][:10]
-        a = agg.setdefault(login, {"github": login, "area": area, "count": 0, "last_at": day})
+        a = agg.setdefault(login, {"github": login, "area": area, "count": 0, "last_at": day, "dates": []})
         a["count"] += 1
         a["last_at"] = max(a["last_at"], day)
+        a["dates"].append(day)
+    for a in agg.values():
+        a["dates"].sort()
     return list(agg.values())
 
 

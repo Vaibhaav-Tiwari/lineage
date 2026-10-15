@@ -197,7 +197,7 @@ ON CREATE SET a.name = r.area
 MERGE (p:Person {id: r.person_id})
 ON CREATE SET p.github = r.github
 MERGE (p)-[c:COMMITTED_TO]->(a)
-SET c.count = r.count, c.last_at = date(r.last_at)
+SET c.count = r.count, c.last_at = date(r.last_at), c.dates = r.dates
 ```
 
 ### `UPSERT_PRS`
@@ -1054,8 +1054,8 @@ Two-way TIE edges for direction-sensitive algorithms (betweenness).
 
 ```cypher
 MATCH (a:Person)-[c:COLLABORATED]->(b:Person)
-MERGE (a)-[t1:TIE]->(b) SET t1.weight = c.weight
-MERGE (b)-[t2:TIE]->(a) SET t2.weight = c.weight
+MERGE (a)-[t1:TIE]->(b) SET t1.weight = c.weight, t1.cost = 1.0 / c.weight
+MERGE (b)-[t2:TIE]->(a) SET t2.weight = c.weight, t2.cost = 1.0 / c.weight
 ```
 
 ### `DELETE_TASKS_OF_EVENT`
@@ -1299,4 +1299,29 @@ RETURN n.id AS id, labels(n)[0] AS label, n.status AS status, coalesce(n.stale, 
 ```cypher
 MATCH (n) WHERE n.id IN $ids AND (n:Answer OR n:Belief)
 RETURN n.id AS id, coalesce(n.stale, false) OR coalesce(n.status, '') = 'stale' AS stale, n.stale_because AS why
+```
+
+## Ownership v2: recency-weighted knowledge, truck factor, introductions
+
+### `AREA_RECENCY`
+
+lineage.recency is a JavaScript UDF (lineage/graph/udf.py): each commit counts 0.5^(age / half-life).
+
+```cypher
+MATCH (p:Person)-[c:COMMITTED_TO]->(a:Area)
+WHERE c.dates IS NOT NULL AND ($areas IS NULL OR a.id IN $areas)
+RETURN a.id AS area_id, a.name AS area, p.id AS id, coalesce(p.name, p.github, p.id) AS name,
+       lineage.recency(c.dates, $as_of, $half_life) AS score, lineage.in_window(c.dates, $since, $as_of) AS commits
+```
+
+### `INTRO_PATH`
+
+Weighted shortest path through two-way collaboration ties; cost = 1/weight, so strong ties are cheap.
+
+```cypher
+MATCH (a:Person {id: $src}), (b:Person {id: $dst})
+CALL algo.SPpaths({sourceNode: a, targetNode: b, relTypes: ['TIE'], weightProp: 'cost', maxLen: 6, pathCount: 1})
+YIELD path, pathWeight
+RETURN [n IN nodes(path) | {id: n.id, name: coalesce(n.name, n.github, n.id)}] AS people,
+       [r IN relationships(path) | r.weight] AS weights, pathWeight AS cost
 ```

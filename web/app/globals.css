@@ -450,3 +450,18 @@ sup.fn button:hover { text-decoration: underline; }
 .sec-row .mark { color: var(--pine); text-align: right; }
 .sec-row.bad .mark { color: var(--stamp); font-weight: 600; }
 @media (max-width: 760px) { .sec-row { grid-template-columns: 1fr auto; } .sec-row .who, .sec-row .mark { display: none; } }
+
+/* find an introduction (Organisation) */
+.introduce { margin: 1.2rem 0 1.4rem; padding: 0.9rem 1rem; background: var(--card); border: 1px solid var(--rule); }
+.introduce h3 { font-family: var(--display); font-weight: 400; font-size: var(--step-1); margin: 0; }
+.introduce .sub { margin: 0.1rem 0 0.6rem; font-size: var(--step--1); color: var(--ink-soft); }
+.intro-controls { display: flex; flex-wrap: wrap; gap: 0.8rem; align-items: center; }
+.intro-controls > * { min-width: 0; flex: 1 1 16rem; }
+.intro-area { display: flex; gap: 0.5rem; align-items: center; font-size: var(--step--1); color: var(--ink-soft); }
+.intro-area select { flex: 1; padding: 0.45rem 0.5rem; border: 1px solid var(--rule); background: var(--paper); font: inherit; color: var(--ink); }
+.intro-result { margin-top: 0.7rem; }
+.intro-result p { margin: 0 0 0.3rem; }
+.intro-result .arrow { color: var(--ink-faint); }
+.intro-result .meta { font-size: var(--step--1); color: var(--ink-soft); }
+.how-link { text-decoration: underline dotted; text-underline-offset: 3px; cursor: help; }
+.tile-plain.truck { color: var(--ink); }

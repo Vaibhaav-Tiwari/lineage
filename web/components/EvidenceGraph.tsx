@@ -92,6 +92,9 @@ function stylesheet(font: string, typed: string): any[] {
     { selector: "node[would = 'step_in']", style: { "border-color": "#2e7d5b", "border-width": 2.5, color: "#2e7d5b" } },
     { selector: "node[would = 'orphaned']", style: { "border-color": "#c2273d", "border-width": 2.5, "background-color": "#f6dde1" } },
     { selector: "node[would = 'one_left']", style: { "border-color": "#c2273d", "border-width": 1.5, "border-style": "dashed" } },
+    { selector: "edge[type = 'TIE']", style: { "target-arrow-shape": "none", "line-color": "#2f5d8c", width: 2, label: "worked with",
+        "font-family": font, "font-style": "italic", "font-size": 10, color: "#2f5d8c", "text-rotation": "autorotate",
+        "text-background-color": "#eef1f3", "text-background-opacity": 1 } },
     { selector: "edge[type = 'STEP_IN']", style: {
         "line-style": "dashed", "line-color": "#2e7d5b", "target-arrow-color": "#2e7d5b", label: "could step in", "font-family": font,
         "font-style": "italic", "font-size": 10, color: "#2e7d5b", "text-rotation": "autorotate", "text-background-color": "#eef1f3",

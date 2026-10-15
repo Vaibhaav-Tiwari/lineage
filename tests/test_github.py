@@ -54,3 +54,10 @@ async def test_fetch_github_names_reads_cache_offline(tmp_path):
     (d / "viicos.json").write_text(json.dumps({"login": "viicos", "name": "Victorien Plot"}))
     names = await fetch_github_names(["Viicos", "missing"], tmp_path, headers={}, offline=True)
     assert names == {"viicos": "Victorien Plot"}
+
+
+def test_aggregate_commits_keeps_each_commit_date():
+    rows = aggregate_commits(json.loads((FIX / "gh_commits_sample.json").read_text()), "argparse")
+    alice = next(r for r in rows if r["github"] == "alice")
+    assert len(alice["dates"]) == alice["count"] and alice["dates"] == sorted(alice["dates"])
+    assert alice["dates"][-1] == alice["last_at"]

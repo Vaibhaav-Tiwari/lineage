@@ -53,6 +53,9 @@ export const api = {
   execute: (id: string) => call<any>(`/actions/${id}/execute`, { method: "POST" }),
   fixtasks: () => call<any[]>("/fixtasks"),
   faq: () => call<any[]>("/faq"),
+  health: () => call<any[]>("/org/health"),
+  introduce: (person_id: string, area_id: string) =>
+    call<any>("/org/introduce", { method: "POST", body: JSON.stringify({ person_id, area_id }) }),
   security: () => call<any[]>("/ops/security"),
   claim: (agent: string) => call<any>("/fixtasks/claim", { method: "POST", body: JSON.stringify({ agent }) }),
   drift: () => call<any[]>("/org/drift"),
