@@ -53,7 +53,7 @@ function stylesheet(font: string, typed: string): any[] {
 }
 
 export default function EvidenceGraph({
-  fragment, cited, stale, wave, path, onSelect,
+  fragment, cited, stale, wave, path, onSelect, fitSignal = 0,
 }: {
   fragment: Fragment;
   cited: Set<string>;
@@ -61,6 +61,7 @@ export default function EvidenceGraph({
   wave: Wave;
   path: string[];
   onSelect: (id: string) => void;
+  fitSignal?: number;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const cyRef = useRef<Core | null>(null);
@@ -88,8 +89,11 @@ export default function EvidenceGraph({
       cy.on("mouseover", "edge", (e) => e.target.addClass("labelled"));
       cy.on("mouseout", "edge", (e) => e.target.removeClass("labelled"));
       cyRef.current = cy;
+      const ro = new ResizeObserver(() => { cy.resize(); });
+      ro.observe(host.current);
+      (cy as any)._ro = ro;
     })();
-    return () => { cancelled = true; cyRef.current?.destroy(); cyRef.current = null; };
+    return () => { cancelled = true; (cyRef.current as any)?._ro?.disconnect(); cyRef.current?.destroy(); cyRef.current = null; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -116,7 +120,7 @@ export default function EvidenceGraph({
       if (added.length) {
         c.add(added);
         c.layout({ name: "fcose", animate: true, animationDuration: 650, randomize: c.nodes().length === added.filter((a) => a.group === "nodes").length,
-                   nodeRepulsion: 9000, idealEdgeLength: 70, padding: 40 } as any).run();
+                   nodeRepulsion: 9000, idealEdgeLength: 80, padding: 40, nodeDimensionsIncludeLabels: true } as any).run();
       }
     }, cy ? 0 : 120);
     return () => window.clearTimeout(t);
@@ -163,6 +167,14 @@ export default function EvidenceGraph({
     timers.current.push(start);
     return () => timers.current.forEach(clearTimeout);
   }, [wave]);
+
+  // re-fit on request (Fit button, entering/leaving focus mode)
+  useEffect(() => {
+    const c = cyRef.current;
+    if (!c || !fitSignal) return;
+    const t = window.setTimeout(() => { c.resize(); c.animate({ fit: { eles: c.elements(), padding: 40 } }, { duration: 300 }); }, 280);
+    return () => window.clearTimeout(t);
+  }, [fitSignal]);
 
   // highlight a blocking chain
   useEffect(() => {

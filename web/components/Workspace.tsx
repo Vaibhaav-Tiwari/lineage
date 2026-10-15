@@ -43,6 +43,17 @@ export default function Workspace() {
   const [applying, setApplying] = useState(false);
   const [cardVersion, setCardVersion] = useState(0);
   const [beforeApply, setBeforeApply] = useState<Fragment | null>(null);
+  const [showLeft, setShowLeft] = useState(true);
+  const [showRight, setShowRight] = useState(true);
+  const [fitSignal, setFitSignal] = useState(0);
+  const focus = !showLeft && !showRight;
+  const setPanels = (l: boolean, r: boolean) => { setShowLeft(l); setShowRight(r); setFitSignal((n) => n + 1); };
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape" && focus) setPanels(true, true); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focus]);
   const [graphs, setGraphs] = useState<{ graph: string; mb: number }[]>([]);
   const [online, setOnline] = useState(true);
   const [lastMs, setLastMs] = useState<number | null>(null);
@@ -192,8 +203,8 @@ export default function Workspace() {
       <TimeRail events={events} ticks={ticks} asOf={asOf} onAsOf={setAsOf} onApply={apply} onUndo={undo} onReset={reset} applying={applying} />
 
       {view === "ask" && (
-        <main className="workspace">
-          <section className="column conversation" aria-label="Conversation">
+        <main className={`workspace ${showLeft ? "" : "no-left"} ${showRight ? "" : "no-right"}`}>
+          <section className="column conversation" aria-label="Conversation" hidden={!showLeft}>
             <div className="thread">
               {entries.length === 0 && (
                 <div className="intro">
@@ -264,7 +275,21 @@ export default function Workspace() {
           </section>
 
           <section className="canvas" aria-label="Evidence">
-            <EvidenceGraph fragment={fragment} cited={cited} stale={stale} wave={wave} path={path} onSelect={setSelected} />
+            <div className="canvas-tools" role="toolbar" aria-label="Graph view">
+              <Tip side="bottom" text={showLeft ? "Hide the conversation to give the graph more room." : "Show the conversation again."}>
+                <button onClick={() => setPanels(!showLeft, showRight)} aria-pressed={!showLeft}>{showLeft ? "Hide conversation" : "Show conversation"}</button>
+              </Tip>
+              <Tip side="bottom" text={showRight ? "Hide the card on the right." : "Show the card again."}>
+                <button onClick={() => setPanels(showLeft, !showRight)} aria-pressed={!showRight}>{showRight ? "Hide card" : "Show card"}</button>
+              </Tip>
+              <Tip side="bottom" text={focus ? "Leave focus mode (Esc)." : "Graph only: hide both panels. Press Esc to come back."}>
+                <button onClick={() => (focus ? setPanels(true, true) : setPanels(false, false))} aria-pressed={focus}>{focus ? "Exit focus" : "Focus"}</button>
+              </Tip>
+              <Tip side="bottom" text="Re-centre and zoom so everything fits.">
+                <button onClick={() => setFitSignal((n) => n + 1)}>Fit</button>
+              </Tip>
+            </div>
+            <EvidenceGraph fragment={fragment} cited={cited} stale={stale} wave={wave} path={path} onSelect={setSelected} fitSignal={fitSignal} />
             {fragment.nodes.length > 0 && <GraphKey />}
             {fragment.nodes.length === 0 && <div className="canvas-empty">The evidence behind each answer is drawn here.</div>}
             {fragment.nodes.length > 0 && (
@@ -272,7 +297,7 @@ export default function Workspace() {
             )}
           </section>
 
-          <aside className="column inspector" aria-label="Card">
+          <aside className="column inspector" aria-label="Card" hidden={!showRight}>
             <IndexCard id={selected} stale={stale} onOpen={setSelected} version={cardVersion} />
           </aside>
         </main>

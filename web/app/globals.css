@@ -86,8 +86,17 @@ a { color: var(--cyan); }
 
 /* ---------- main workspace ---------- */
 .workspace { display: grid; grid-template-columns: minmax(320px, 380px) 1fr minmax(300px, 340px); min-height: 0; }
+.workspace.no-left { grid-template-columns: 1fr minmax(300px, 340px); }
+.workspace.no-right { grid-template-columns: minmax(320px, 380px) 1fr; }
+.workspace.no-left.no-right { grid-template-columns: 1fr; }
+.canvas-tools { position: absolute; top: 0.7rem; right: 0.8rem; z-index: 5; display: flex; gap: 0.35rem; flex-wrap: wrap; justify-content: flex-end; }
+.canvas-tools button {
+  background: var(--card); border: 1px solid var(--rule); padding: 0.15rem 0.55rem; cursor: pointer; font-size: var(--step--1); color: var(--ink-soft);
+}
+.canvas-tools button:hover, .canvas-tools button[aria-pressed="true"] { border-color: var(--ink); color: var(--ink); }
 .column { min-height: 0; overflow: auto; }
 .conversation { border-right: 1px solid var(--rule); display: flex; flex-direction: column; }
+.workspace > [hidden] { display: none; }
 .inspector { border-left: 1px solid var(--rule); background: var(--paper-deep); }
 .canvas { position: relative; min-height: 0; }
 .canvas .cy { position: absolute; inset: 0; }
