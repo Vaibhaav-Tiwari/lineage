@@ -10,6 +10,10 @@ const pct = (d: Date) => ((d.getFullYear() + d.getMonth() / 12 + d.getDate() / 3
 
 export type Tick = { id: string; at: string; label: string };
 
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const fmtDay = (iso: string) => { const [y, m, d] = iso.split("-").map(Number); return `${d} ${MONTHS[m - 1]} ${y}`; };
+const pinLabel = (e: EventRow) => (e.kind === "supersede" ? `PEP ${e.pep.split(":")[1]} replaced` : e.summary.split(/[.(]/)[0]);
+
 export default function TimeRail({
   events, ticks, asOf, onAsOf, onApply, onUndo, onReset, applying,
 }: {
@@ -28,7 +32,7 @@ export default function TimeRail({
   const [confirmReset, setConfirmReset] = useState(false);
   const pinBox = useRef<HTMLDivElement>(null);
   useDismiss(pinBox, open !== null, useCallback(() => setOpen(null), []));
-  const years = useMemo(() => Array.from({ length: (END - START) / 3 + 1 }, (_, i) => START + i * 3), []);
+  const years = useMemo(() => Array.from({ length: END - START }, (_, i) => START + i), []);
   const handle = asOf ? pct(new Date(asOf)) : 100;
 
   function setFromX(clientX: number) {
@@ -62,24 +66,19 @@ export default function TimeRail({
 
   return (
     <section className="rail" aria-label="Time">
-      <div className="rail-meta">
-        <span>{asOf ? <>Answering as of <strong>{asOf}</strong>: anything later is ignored.</> : "Answering with everything known today."}</span>
-        {asOf ? <button onClick={() => onAsOf(null)}>Back to today</button> : <span style={{ fontStyle: "italic" }}>Drag the dial back in time to ask as of an earlier date.</span>}
-        <span style={{ marginLeft: "auto" }}>Red pins are real changes you can replay.</span>
-        {confirmReset ? (
-          <span className="confirm">
-            <span>Reset everything? Agent memory and the task board are cleared.</span>
-            <button className="danger" onClick={() => { setConfirmReset(false); onReset(); }}>Yes, reset</button>
-            <button onClick={() => setConfirmReset(false)}>Cancel</button>
-          </span>
-        ) : <button onClick={() => setConfirmReset(true)}>Reset demo</button>}
+      <div className="rail-status" aria-live="polite">
+        {asOf ? <>As of <strong className="typed">{asOf}</strong> <button onClick={() => onAsOf(null)}>Back to today</button></> : "As of today"}
       </div>
       <div className="rail-track" ref={track}>
         <div className="rail-line" />
-        {years.map((y) => <span key={y} className="rail-year" style={{ left: `${((y - START) / (END - START)) * 100}%` }}>{y}</span>)}
+        {years.map((y) => (
+          <span key={y} className={`rail-mark ${y % 5 === 0 ? "major" : ""}`} style={{ left: `${((y - START) / (END - START)) * 100}%` }}>
+            {y % 5 === 0 && <span className="rail-year">{y}</span>}
+          </span>
+        ))}
         {ticks.map((t) => (
           <span key={t.id} className="rail-tick-hit" style={{ left: `${pct(new Date(t.at))}%` }}>
-            <Tip text={`${t.label}, ${t.at}`}><span className="rail-tick decision" tabIndex={0} style={{ position: "absolute", left: 5 }} aria-label={`${t.label}, ${t.at}`} /></Tip>
+            <Tip text={`${t.label}, ${t.at}`}><span className="rail-dot" tabIndex={0} aria-label={`${t.label}, ${t.at}`} /></Tip>
           </span>
         ))}
         {events.map((e) => (
@@ -89,6 +88,9 @@ export default function TimeRail({
                 <span className="head" /><span className="stem" />
               </button>
             </Tip>
+            <span className={`rail-pin-label ${pct(new Date(e.at)) > 50 ? "left" : ""}`} aria-hidden="true">
+              {fmtDay(e.at)}: {pinLabel(e)}{e.applied ? " (applied)" : ""}
+            </span>
             {open === e.slug && (
               <div className="pin-pop" role="dialog">
                 <p><strong>{e.at}</strong> — {e.summary}</p>
@@ -108,10 +110,21 @@ export default function TimeRail({
         ))}
         {dragging && <span className="rail-bubble" style={{ left: `${handle}%` }}>{asOf ?? "today"}</span>}
         <div className="rail-handle" style={{ left: `${handle}%` }} onPointerDown={drag} role="slider" tabIndex={0}
+             title="Drag back in time to ask as of an earlier date"
              aria-label="Answer as of date. Arrow keys move six months; End returns to today."
              aria-valuemin={START} aria-valuemax={END} aria-valuenow={asOf ? Number(asOf.slice(0, 4)) : END} aria-valuetext={asOf ?? "today"}
              onKeyDown={nudge} />
         {!asOf && !dragging && <span className="rail-today" style={{ left: `${handle}%` }}>today</span>}
+      </div>
+      <div className="rail-side">
+        <button onClick={() => setConfirmReset(true)}>Reset demo</button>
+        {confirmReset && (
+          <span className="confirm" role="dialog">
+            <span>Reset everything? Agent memory and the task board are cleared.</span>
+            <button className="danger" onClick={() => { setConfirmReset(false); onReset(); }}>Yes, reset</button>
+            <button onClick={() => setConfirmReset(false)}>Cancel</button>
+          </span>
+        )}
       </div>
     </section>
   );

@@ -44,7 +44,7 @@ a { color: var(--cyan); }
 .frame { display: grid; grid-template-rows: auto auto 1fr auto; height: 100dvh; }
 .masthead {
   display: flex; align-items: baseline; gap: 0.4rem 1.5rem; flex-wrap: wrap;
-  padding: 0.9rem 1.5rem 0.4rem;
+  padding: 0.6rem 1.5rem 0.1rem;
 }
 .masthead h1 { font-family: var(--display); font-weight: 400; font-size: var(--step-3); margin: 0; letter-spacing: 0.01em; }
 .masthead .motto { font-style: italic; color: var(--ink-soft); }
@@ -55,31 +55,46 @@ a { color: var(--cyan); }
 }
 .views button[aria-pressed="true"] { color: var(--ink); border-bottom-color: var(--ink); }
 
-/* ---------- time rail ---------- */
-.rail { padding: 0.2rem 1.5rem 0.9rem; border-bottom: 1px solid var(--rule); }
-.rail-track { position: relative; height: 54px; }
-.rail-line { position: absolute; left: 0; right: 0; top: 30px; height: 1px; background: var(--ink); }
-.rail-year { position: absolute; top: 36px; transform: translateX(-50%); font-size: var(--step--1); color: var(--ink-faint); }
-.rail-tick { position: absolute; top: 24px; width: 1px; height: 13px; background: var(--cyan); }
-.rail-tick.decision { height: 17px; top: 22px; width: 2px; }
+/* ---------- time rail: a ruler in one row (status | ruler | reset) ---------- */
+.rail {
+  display: grid; grid-template-columns: 8.5rem 1fr auto; gap: 1.4rem; align-items: center;
+  padding: 0 1.5rem; border-bottom: 1px solid var(--rule); font-size: var(--step--1); color: var(--ink-soft);
+}
+.rail-status { font-style: italic; line-height: 1.3; }
+.rail-status strong { font-style: normal; color: var(--ink); font-weight: 400; }
+.rail-status button, .rail-side > button, .confirm button {
+  background: none; border: 0; padding: 0; color: var(--cyan); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; font: inherit;
+}
+.rail-side { position: relative; }
+.rail-side .confirm {
+  position: absolute; right: 0; top: calc(100% + 0.4rem); z-index: 6; width: 17rem; display: flex; flex-wrap: wrap; gap: 0.3rem 0.8rem;
+  background: var(--card); border: 1px solid var(--ink); padding: 0.6rem 0.7rem; color: var(--ink);
+}
+.rail-track { position: relative; height: 50px; }
+.rail-line { position: absolute; left: 0; right: 0; top: 26px; height: 1px; background: var(--ink); }
+.rail-mark { position: absolute; top: 26px; width: 1px; height: 4px; background: var(--ink-faint); }
+.rail-mark.major { height: 8px; }
+.rail-year { position: absolute; top: 9px; left: 0; transform: translateX(-50%); font-size: 0.75rem; color: var(--ink-faint); }
+.rail-dot { position: absolute; left: 3px; top: 1px; width: 6px; height: 6px; border-radius: 50%; background: var(--cyan); cursor: help; }
+.rail-tick-hit { position: absolute; top: 14px; width: 12px; height: 12px; transform: translateX(-6px); }
 .rail-pin {
-  position: absolute; top: 2px; transform: translateX(-50%); cursor: pointer; background: none; border: 0; padding: 0;
+  position: absolute; top: 3px; transform: translateX(-50%); cursor: pointer; background: none; border: 0; padding: 0;
   display: flex; flex-direction: column; align-items: center; color: var(--stamp);
 }
-.rail-pin .head { width: 14px; height: 14px; border-radius: 50%; background: var(--stamp); box-shadow: 0 0 0 3px var(--stamp-wash); }
+.rail-pin .head { width: 12px; height: 12px; border-radius: 50%; background: var(--stamp); box-shadow: 0 0 0 3px var(--stamp-wash); }
 .rail-pin.applied .head { background: var(--card); border: 2px solid var(--stamp); }
-.rail-pin .stem { width: 2px; height: 14px; background: var(--stamp); }
+.rail-pin .stem { width: 2px; height: 11px; background: var(--stamp); }
+.rail-pin-label { position: absolute; top: 2px; left: 10px; white-space: nowrap; font-style: italic; color: var(--stamp); font-size: 0.78rem; pointer-events: none; }
+.rail-pin-label.left { left: auto; right: 10px; }
 .rail-handle {
-  position: absolute; top: 14px; width: 2px; height: 32px; background: var(--ink); transform: translateX(-1px); cursor: ew-resize;
+  position: absolute; top: 12px; width: 2px; height: 22px; background: var(--ink); transform: translateX(-1px); cursor: ew-resize;
 }
 .rail-handle::after {
-  content: ""; position: absolute; left: -6px; top: -8px; width: 14px; height: 14px; border-radius: 50%;
+  content: ""; position: absolute; left: -6px; top: -9px; width: 14px; height: 14px; border-radius: 50%;
   background: var(--paper); border: 2px solid var(--ink);
 }
-.rail-meta { display: flex; gap: 1rem; align-items: baseline; font-size: var(--step--1); color: var(--ink-soft); }
-.rail-meta button { background: none; border: 0; padding: 0; color: var(--cyan); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 .pin-pop {
-  position: absolute; top: 58px; transform: translateX(-90%); width: 300px; z-index: 5;
+  position: absolute; top: 40px; transform: translateX(-90%); width: 300px; z-index: 5;
   background: var(--card); border: 1px solid var(--rule); padding: 0.9rem 1rem; box-shadow: 0 8px 28px rgba(24, 35, 58, 0.14);
 }
 .pin-pop p { margin: 0 0 0.6rem; }
@@ -246,6 +261,10 @@ a { color: var(--cyan); }
 .episode span { flex: 1; font-style: italic; }
 .proof { font-size: var(--step--1); color: var(--pine); margin-top: 0.4rem; }
 
+@media (max-width: 760px) {
+  .rail { grid-template-columns: 1fr auto; gap: 0.2rem 1rem; padding-top: 0.3rem; }
+  .rail-track { grid-column: 1 / -1; grid-row: 2; }
+}
 @media (max-width: 1100px) {
   .workspace { grid-template-columns: 1fr; grid-auto-rows: minmax(360px, auto); overflow: auto; }
   .conversation, .inspector { border: 0; }
@@ -314,13 +333,11 @@ a { color: var(--cyan); }
 .confirm .danger { color: var(--stamp); }
 
 /* ---------- time rail clarity ---------- */
-.rail-today { position: absolute; top: 46px; transform: translateX(-50%); font-size: var(--step--1); color: var(--ink); font-style: italic; white-space: nowrap; }
+.rail-today { position: absolute; top: 34px; transform: translateX(-50%); font-size: 0.75rem; color: var(--ink); font-style: italic; white-space: nowrap; }
 .rail-bubble {
   position: absolute; top: -6px; transform: translateX(-50%); background: var(--ink); color: var(--paper); font-family: var(--typed);
   font-size: 0.75rem; padding: 0.05rem 0.4rem; white-space: nowrap; pointer-events: none;
 }
-.rail-tick.decision { width: 3px; height: 20px; top: 21px; cursor: help; }
-.rail-tick-hit { position: absolute; top: 16px; width: 12px; height: 30px; transform: translateX(-5px); }
 
 /* ---------- plain-language readings ---------- */
 .plain-list { margin: 0.4rem 0 0.6rem; padding-left: 1.1rem; }
