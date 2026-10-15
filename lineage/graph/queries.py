@@ -612,3 +612,26 @@ WITH p, count(DISTINCT pep) AS authored
 OPTIONAL MATCH (d:Decision)-[:ANNOUNCED_BY]->(p)
 RETURN authored, count(DISTINCT d) AS announced
 """
+
+# --- API listings --------------------------------------------------------------------
+
+LIST_EVENTS = """
+MATCH (e:Event)-[:AFFECTS]->(p:PEP)
+RETURN e.id AS id, e.kind AS kind, e.summary AS summary, toString(e.at) AS at, e.applied AS applied,
+       e.source_url AS source_url, p.id AS pep, e.payload_json AS payload
+ORDER BY at
+"""
+
+LIST_ACTIONS = """
+MATCH (x:Action)
+RETURN x.id AS id, x.kind AS kind, x.status AS status, x.reason AS reason, x.payload_json AS payload, x.created_at AS created_at
+ORDER BY x.created_at
+"""
+
+SEARCH_PEOPLE = """
+MATCH (p:Person)
+WHERE toLower(coalesce(p.name, '')) CONTAINS toLower($q) OR toLower(coalesce(p.github, '')) CONTAINS toLower($q)
+OPTIONAL MATCH (p)-[:AUTHORED]->(pep:PEP)
+RETURN p.id AS id, p.name AS name, p.github AS github, count(pep) AS peps
+ORDER BY peps DESC, id LIMIT 15
+"""
