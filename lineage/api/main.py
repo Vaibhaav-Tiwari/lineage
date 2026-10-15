@@ -95,9 +95,14 @@ class State:
             self.historian_db = await get_db(user=self.hist_user, password=pw)
             await ensure_shared_schema(self.db.select_graph(self.name("shared")))
             self.stew_user, spw = f"{self.prefix}_steward", secrets.token_urlsafe(24)
+            company = self.name("company")
             await create_acl_user(self.db, self.stew_user, spw,
-                                  own_pattern=[self.name("company") + "*", self.name("agent", "*"), self.name("shared")],
-                                  read_patterns=[])
+                                  own_pattern=[company + "*", self.name("agent", "*"), self.name("shared")],
+                                  read_patterns=[],
+                                  # what-ifs run on a throwaway copy: it may copy the company graph into a
+                                  # fork and delete forks, and nothing else
+                                  extra_selectors=[f"(~{company} ~{company}:fork:* +GRAPH.COPY)",
+                                                   f"(~{company}:fork:* +GRAPH.DELETE +GRAPH.MEMORY)"])
             self.steward_db = await get_db(user=self.stew_user, password=spw)
             if self._embedder is None:
                 from lineage.ingest.embed import Embedder
@@ -232,6 +237,13 @@ def create_app(prefix: str = "lineage", llm_factory: Callable | None = None, emb
         done["effect"] = await perform(kind, aid, historian_g=hg, shared_g=sdb.select_graph(st.name("shared")),
                                        company_g=st.db.select_graph(st.name("company")))
         return done
+
+    @app.get("/ops/security")
+    async def security():
+        from lineage.security import security_report
+
+        return await security_report(st.db, {"historian": (st.hist_user, st.historian_db),
+                                             "steward": (st.stew_user, st.steward_db)}, prefix=st.prefix)
 
     @app.get("/faq")
     async def faq():

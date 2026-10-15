@@ -47,15 +47,24 @@ async def write_batch(g, cypher: str, rows: list[dict], chunk: int = 500) -> int
     return len(rows)
 
 
-async def create_acl_user(db: FalkorDB, name: str, password: str, own_pattern: str | list[str], read_patterns: list[str]) -> None:
-    """Full access to graphs matching own_pattern; GRAPH.RO_QUERY only on read_patterns.
+# What an agent's login may run on its own graphs: queries, and looking at plans. Not GRAPH.DELETE,
+# GRAPH.COPY, DEL, KEYS, CONFIG or ACL: an agent can change what is in its memory, never destroy or
+# clone it. Schema work (indexes, constraints) is done by the admin connection at start-up.
+# INFO is needed because the FalkorDB client calls it on connect (server stats only, no data).
+AGENT_COMMANDS = ["GRAPH.QUERY", "GRAPH.RO_QUERY", "GRAPH.EXPLAIN", "GRAPH.PROFILE", "INFO"]
+
+
+async def create_acl_user(db: FalkorDB, name: str, password: str, own_pattern: str | list[str], read_patterns: list[str],
+                          extra_selectors: list[str] | None = None) -> None:
+    """Query access to graphs matching own_pattern; GRAPH.RO_QUERY only on read_patterns.
 
     Uses a Redis 7 ACL *selector* per read pattern. FalkorDB's documented
     `%R~pattern` form does not work on 6.0.2: every graph command needs RW key
     access, so `%R~` refuses even reads (verified 2026-10-14)."""
     owns = [own_pattern] if isinstance(own_pattern, str) else own_pattern
-    rules = ["on", f">{password}", "resetkeys", "-@all", *[f"~{p}" for p in owns], "+@all"]
+    rules = ["on", f">{password}", "resetkeys", "-@all", "+@connection", *[f"~{p}" for p in owns], *[f"+{c}" for c in AGENT_COMMANDS]]
     rules += [f"(~{p} +GRAPH.RO_QUERY)" for p in read_patterns]
+    rules += extra_selectors or []
     await db.connection.execute_command("ACL", "SETUSER", name, *rules)
 
 

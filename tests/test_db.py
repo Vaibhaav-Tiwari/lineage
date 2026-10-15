@@ -56,3 +56,45 @@ async def test_acl_read_only_shared_graph(db):
         await drop_acl_user(db, user)
         await shared.delete()
         await db.select_graph(own_name).delete()
+
+
+async def test_agent_logins_cannot_delete_or_copy_graphs_even_their_own(db):
+    tag = uuid.uuid4().hex[:6]
+    own = f"test:own{tag}"
+    user, pw = f"t_tight_{tag}", "pw-" + tag
+    await create_acl_user(db, user, pw, own_pattern=f"test:own{tag}*", read_patterns=[])
+    agent = await get_db(user=user, password=pw)
+    try:
+        await agent.select_graph(own).query("CREATE (:Mine)")  # normal work is allowed
+        for cmd in (("GRAPH.DELETE", own), ("GRAPH.COPY", own, own + ":copy"), ("DEL", own), ("KEYS", "*")):
+            with pytest.raises(Exception, match="(?i)noperm|permission"):
+                await agent.connection.execute_command(*cmd)
+        assert (await ro(db.select_graph(own), "MATCH (n:Mine) RETURN count(n) AS c")) == [{"c": 1}]
+    finally:
+        await agent.aclose()
+        await drop_acl_user(db, user)
+        await db.select_graph(own).delete()
+
+
+async def test_security_report_proves_the_boundaries_without_changing_anything(db):
+    from lineage.security import security_report
+
+    tag = uuid.uuid4().hex[:6]
+    company, mine, shared = f"test{tag}:company", f"test{tag}:agent:historian", f"test{tag}:shared"
+    await db.select_graph(company).query("CREATE (:PEP {id:'pep:1'})")
+    user, pw = f"t_rep_{tag}", "pw-" + tag
+    await create_acl_user(db, user, pw, own_pattern=[mine], read_patterns=[company])
+    agent = await get_db(user=user, password=pw)
+    try:
+        rows = await security_report(db, {"historian": (user, agent)}, prefix=f"test{tag}")
+        assert rows and all(r["ok"] for r in rows), rows
+        by = {r["check"]: r for r in rows}
+        assert by["read the company graph"]["allowed"] is True
+        assert by["write the company graph"]["allowed"] is False
+        assert by["delete its own memory graph"]["allowed"] is False
+        assert (await ro(db.select_graph(company), "MATCH (n) RETURN count(n) AS c")) == [{"c": 1}]
+        assert shared not in await db.list_graphs()
+    finally:
+        await agent.aclose()
+        await drop_acl_user(db, user)
+        await db.select_graph(company).delete()

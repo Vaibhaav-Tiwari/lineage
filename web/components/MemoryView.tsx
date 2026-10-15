@@ -16,6 +16,7 @@ type Pending = { area: string; eid: string; question: string; left: number };
 export default function MemoryView({ uid }: { uid: string }) {
   const [beliefs, setBeliefs] = useState<any[]>([]);
   const [faq, setFaq] = useState<any[]>([]);
+  const [checks, setChecks] = useState<any[] | null>(null);
   const [interests, setInterests] = useState<any[]>([]);
   const [why, setWhy] = useState<Record<string, any[]>>({});
   const [proof, setProof] = useState<string | null>(null);
@@ -26,6 +27,7 @@ export default function MemoryView({ uid }: { uid: string }) {
   async function load() {
     setBeliefs(await api.beliefs().catch(() => []));
     setFaq(await api.faq().catch(() => []));
+    api.security().then(setChecks).catch(() => setChecks([]));
     const ints = await api.interests(uid).catch(() => []);
     setInterests(ints);
     const w: Record<string, any[]> = {};
@@ -117,6 +119,31 @@ export default function MemoryView({ uid }: { uid: string }) {
             </div>
           );
         })}
+      </section>
+      <section className="security">
+        <h2>How the agents are kept apart</h2>
+        <p className="sub">Each agent logs in to FalkorDB as its own user, and the database itself enforces what it may touch. These checks run live every time you open this page: harmless reads are really run as the agent; anything that would write or destroy is asked of the database&rsquo;s permission engine (<span className="typed">ACL DRYRUN</span>), so nothing is changed to prove it.</p>
+        {checks === null && <p className="working">Running the checks…</p>}
+        {checks && checks.length > 0 && (
+          <>
+            <p className={checks.every((c) => c.ok) ? "proof" : "a-note"}>
+              {checks.every((c) => c.ok) ? `All ${checks.length} boundaries hold.` : `${checks.filter((c) => !c.ok).length} of ${checks.length} boundaries do not hold.`}
+            </p>
+            <div className="sec-table" role="table" aria-label="Permission checks">
+              {checks.map((c) => (
+                <div key={c.agent + c.check} role="row" className={`sec-row ${c.ok ? "ok" : "bad"}`}>
+                  <span role="cell" className="who">{c.agent === "historian" ? "Historian" : "Steward"}</span>
+                  <span role="cell">tries to {c.check}</span>
+                  <Tip text={`${c.command}: ${c.detail}. Checked by: ${c.how}.`}>
+                    <span role="cell" tabIndex={0} className={`verdict-pill ${c.allowed ? "allowed" : "refused"}`}>{c.allowed ? "allowed" : "refused"}</span>
+                  </Tip>
+                  <span role="cell" className="mark" aria-label={c.ok ? "as intended" : "not as intended"}>{c.ok ? "as intended" : "NOT as intended"}</span>
+                </div>
+              ))}
+            </div>
+            <p className="how">Known limit: the database&rsquo;s rules cannot express the direction of a copy, so the Steward&rsquo;s right to copy the company graph into a what-if fork would also let it copy a fork back over a missing company graph name.</p>
+          </>
+        )}
       </section>
     </main>
   );
