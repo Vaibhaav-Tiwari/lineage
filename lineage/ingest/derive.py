@@ -9,6 +9,10 @@ from lineage.graph import queries as Q
 
 THREAD_WEIGHT_CAP = 5
 MIN_AREA_NAME = 4  # 're', 'io', 'gc'... match far too much prose
+# stdlib modules named after everyday words: like generic interest areas, they only count in titles
+COMMON_WORDS = {"time", "string", "copy", "code", "random", "select", "signal", "test", "site", "token",
+                "keyword", "array", "operator", "queue", "secrets", "wave", "types", "base64", "numbers",
+                "struct", "locale", "platform", "builtins", "warnings", "errors", "parser", "symbol"}
 
 
 async def derive_collaboration(g) -> int:
@@ -43,6 +47,8 @@ async def derive_concerns(g) -> int:
         for t in titles:
             if t["title"] and pat.search(t["title"]):
                 rows.add((t["id"], area["id"]))
+        if area.get("kind") == "interest" or name.lower() in COMMON_WORDS:
+            continue  # generic words ("performance", "documentation") only count in titles
         query = '"' + re.sub(r"[^\w ]", " ", name).strip() + '"'
         mentions: dict[str, int] = defaultdict(int)
         try:

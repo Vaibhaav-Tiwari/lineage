@@ -202,7 +202,7 @@ MERGE (a)-[c:COLLABORATED]->(b)
 SET c.weight = r.w
 """
 
-AREAS = "MATCH (a:Area) RETURN a.id AS id, a.name AS name"
+AREAS = "MATCH (a:Area) RETURN a.id AS id, a.name AS name, a.kind AS kind"
 PEP_TITLES = "MATCH (p:PEP) RETURN p.id AS id, p.title AS title"
 
 # Full-text search over PEP text chunks for one area name.
@@ -653,3 +653,5 @@ BELIEFS_ON_REF = """
 MATCH (b:Belief)-[:DERIVED_FROM]->(:Evidence {ref: $ref})
 RETURN b.id AS id, b.text AS text, b.status AS status, b.confidence AS confidence
 """
+
+DELETE_CONCERNS = "MATCH (:PEP)-[r:CONCERNS]->(:Area) DELETE r"

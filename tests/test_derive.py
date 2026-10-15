@@ -44,3 +44,15 @@ async def test_pagerank_stored_on_peps(g):
     out = await ro(g, "MATCH (p:PEP) RETURN p.id AS id, p.pagerank AS pr ORDER BY pr DESC")
     assert all(isinstance(r["pr"], float) for r in out)
     assert out[0]["id"] == "pep:4"
+
+
+async def test_generic_interest_areas_link_only_via_title(g):
+    await ensure_company_schema(g)
+    await rw(g, """
+    CREATE (:Area {id:'area:performance', name:'performance', kind:'interest'}), (:Area {id:'area:typing', name:'typing', kind:'module'}),
+           (p:PEP {id:'pep:1', title:'Annotations'}), (q:PEP {id:'pep:2', title:'Performance improvements'}),
+           (:Chunk {id:'c1', text:'performance performance performance typing typing'})-[:PART_OF]->(p)
+    """)
+    await derive_concerns(g)
+    out = await ro(g, "MATCH (p:PEP)-[:CONCERNS]->(a:Area) RETURN p.id AS p, a.id AS a ORDER BY p, a")
+    assert out == [{"p": "pep:1", "a": "area:typing"}, {"p": "pep:2", "a": "area:performance"}]
