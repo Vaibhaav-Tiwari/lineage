@@ -200,7 +200,8 @@ def create_app(prefix: str = "lineage", llm_factory: Callable | None = None, emb
     @app.post("/events/{slug}/rewind")
     async def rewind(slug: str):
         sdb = st.steward_db
-        await reset_event(sdb.select_graph(st.name("company")), list(agent_graphs(sdb).values()), slug)
+        await reset_event(sdb.select_graph(st.name("company")), list(agent_graphs(sdb).values()), slug,
+                          shared_g=sdb.select_graph(st.name("shared")))
         return {"rewound": slug}
 
     @app.post("/actions")

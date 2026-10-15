@@ -12,7 +12,7 @@ def _task_id(kind: str, target: str) -> str:
 
 async def open_fix_tasks(sg, items: list[dict]) -> list[str]:
     rows = [{"id": _task_id(i["kind"], i["target_ref"]), "kind": i["kind"], "target_ref": i["target_ref"],
-             "reason": i["reason"], "suggested": i.get("suggested") or []} for i in items]
+             "reason": i["reason"], "suggested": i.get("suggested") or [], "event": i.get("event")} for i in items]
     if not rows:
         return []
     return [r["id"] for r in await rw(sg, Q.UPSERT_FIX_TASKS, {"rows": rows, "now": time.time()})]
@@ -33,12 +33,16 @@ async def list_tasks(sg, status: str | None = None) -> list[dict]:
     return await ro(sg, Q.LIST_TASKS, {"status": status})
 
 
-async def open_fix_tasks_for(sg, company_g, ripple: dict, reason: str) -> list[str]:
+async def delete_tasks_of_event(sg, event: str) -> None:
+    await rw(sg, Q.DELETE_TASKS_OF_EVENT, {"event": event})
+
+
+async def open_fix_tasks_for(sg, company_g, ripple: dict, reason: str, event: str | None = None) -> list[str]:
     soft = ripple.get("soft") or []
     if not soft:
         return []
     owners = {r["pep"]: r["owners"][:3] for r in await ro(company_g, Q.AREA_OWNERS_OF_PEPS, {"ids": soft})}
     changed = ", ".join(ripple["hard"])
     items = [{"kind": "review-citation", "target_ref": pep, "suggested": sorted(owners.get(pep, [])),
-              "reason": f"{pep} cites {changed}, which changed: {reason}"} for pep in soft]
+              "reason": f"{pep} cites {changed}, which changed: {reason}", "event": event} for pep in soft]
     return await open_fix_tasks(sg, items)

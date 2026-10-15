@@ -29,12 +29,21 @@ async def apply_event(slug: str, *, company_g, agent_graphs: dict, shared_g=None
     if shared_g is not None:
         from lineage.memory.coord import open_fix_tasks_for
 
-        report["fixtasks"] = await open_fix_tasks_for(shared_g, company_g, ripple, reason)
+        report["fixtasks"] = await open_fix_tasks_for(shared_g, company_g, ripple, reason, event=slug)
     return report
 
 
-async def reset_event(company_g, agent_graphs, slug: str) -> None:
+async def reset_event(company_g, agent_graphs, slug: str, shared_g=None) -> None:
+    """Undo a change event everywhere: company graph, every agent's memory, the shared board."""
+    from lineage.db import rw
+    from lineage.graph import queries as Q
+    from lineage.memory.coord import delete_tasks_of_event
+
     await rewind_event(company_g, slug)
     await clear_stale(company_g)
     for ag in agent_graphs:
+        await rw(ag, Q.RESTORE_BELIEFS)
+        await rw(ag, Q.RESTORE_ACTIONS)
         await clear_stale(ag)
+    if shared_g is not None:
+        await delete_tasks_of_event(shared_g, slug)

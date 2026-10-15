@@ -467,9 +467,26 @@ WHERE x:Belief OR x:Answer OR x:Action
 RETURN DISTINCT x.id AS id, labels(x)[0] AS label, x.status AS status
 """
 
-MARK_BELIEFS_STALE = "MATCH (b:Belief) WHERE b.id IN $ids SET b.status = 'stale', b.stale = true, b.stale_because = $reason"
+MARK_BELIEFS_STALE = """
+MATCH (b:Belief) WHERE b.id IN $ids AND b.status <> 'stale'
+SET b.prev_status = b.status, b.status = 'stale', b.stale = true, b.stale_because = $reason
+"""
 MARK_ANSWERS_STALE = "MATCH (a:Answer) WHERE a.id IN $ids SET a.stale = true, a.stale_because = $reason"
-BLOCK_ACTIONS = "MATCH (x:Action) WHERE x.id IN $ids AND x.status = 'pending' SET x.status = 'blocked', x.reason = $reason RETURN x.id AS id"
+BLOCK_ACTIONS = """
+MATCH (x:Action) WHERE x.id IN $ids AND x.status = 'pending'
+SET x.status = 'blocked', x.blocked_by_steward = true, x.reason = $reason
+RETURN x.id AS id
+"""
+
+# Undo of a change event inside an agent graph: put beliefs/actions back as they were.
+RESTORE_BELIEFS = """
+MATCH (b:Belief) WHERE b.prev_status IS NOT NULL
+SET b.status = b.prev_status, b.prev_status = null, b.stale = false, b.stale_because = null
+"""
+RESTORE_ACTIONS = """
+MATCH (x:Action) WHERE x.blocked_by_steward = true AND x.status = 'blocked'
+SET x.status = 'pending', x.reason = null, x.blocked_by_steward = null
+"""
 
 # --- Action gate --------------------------------------------------------------------
 
@@ -509,7 +526,7 @@ UPSERT_FIX_TASKS = """
 UNWIND $rows AS r
 MERGE (t:FixTask {id: r.id})
 ON CREATE SET t.status = 'open', t.created_at = $now, t.kind = r.kind, t.target_ref = r.target_ref,
-              t.reason = r.reason, t.suggested = r.suggested
+              t.reason = r.reason, t.suggested = r.suggested, t.event = r.event
 RETURN t.id AS id
 """
 
@@ -717,3 +734,6 @@ MATCH (a:Person)-[c:COLLABORATED]->(b:Person)
 MERGE (a)-[t1:TIE]->(b) SET t1.weight = c.weight
 MERGE (b)-[t2:TIE]->(a) SET t2.weight = c.weight
 """
+
+# Undo of a change event on the shared board: drop the review tasks it opened.
+DELETE_TASKS_OF_EVENT = "MATCH (t:FixTask) WHERE t.event = $event DELETE t"
