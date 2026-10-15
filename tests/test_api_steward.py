@@ -127,3 +127,53 @@ async def test_org_group_whatif_preview_and_searches(env):
     p = (await c.post("/org/preview", json={"pep": 101})).json()
     assert p["pep"]["number"] == 101 and "nothing has been changed" in p["plain"].lower()
     assert (await c.post("/org/preview", json={"pep": 999})).status_code == 404
+
+
+async def _answer_and_action(c, kind):
+    await c.post("/events/pep-101-superseded/rewind")
+    ans = (await c.post("/ask", json={"question": "What is the current way?"})).json()
+    a = (await c.post("/actions", json={"kind": kind, "payload": {"question": "What is the current way?"},
+                                         "derived_from": [ans["answer_id"]]})).json()
+    return ans, a
+
+
+async def test_faq_action_publishes_then_is_withdrawn_and_restored_with_the_truth(env):
+    c, _ = env
+    ans, a = await _answer_and_action(c, "add_to_onboarding_faq")
+    run = (await c.post(f"/actions/{a['id']}/execute")).json()
+    assert run["status"] == "done" and run["effect"]["kind"] == "faq"
+    faq = (await c.get("/faq")).json()
+    assert [(f["question"], f["status"], f["answer"]) for f in faq] == [("What is the current way?", "live", "PEP 101 is the current way.")]
+
+    rep = (await c.post("/events/pep-101-superseded/apply")).json()
+    assert rep["faq_withdrawn"] == 1
+    entry = (await c.get("/faq")).json()[0]
+    assert entry["status"] == "withdrawn" and "PEP 101" in entry["withdrawn_reason"]
+
+    await c.post("/events/pep-101-superseded/rewind")
+    assert (await c.get("/faq")).json()[0]["status"] == "live"
+
+
+async def test_owner_review_action_opens_a_task_on_the_shared_board(env):
+    c, _ = env
+    _, a = await _answer_and_action(c, "ask_owner_review")
+    run = (await c.post(f"/actions/{a['id']}/execute")).json()
+    assert run["effect"]["kind"] == "task"
+    tasks = {t["id"]: t for t in (await c.get("/fixtasks")).json()}
+    task = tasks[run["effect"]["task"]]
+    assert task["kind"] == "owner-review" and task["target_ref"] == "pep:101" and task["status"] == "open"
+
+
+async def test_can_i_rely_on_reports_what_changed_and_why(env):
+    c, _ = env
+    ans, _ = await _answer_and_action(c, "add_to_onboarding_faq")
+    ids = ["pep:101", "pep:103", ans["answer_id"]]
+    before = {r["id"]: r for r in (await c.get("/rely", params={"ids": ids})).json()}
+    assert all(r["reliable"] for r in before.values())
+
+    await c.post("/events/pep-101-superseded/apply")
+    after = {r["id"]: r for r in (await c.get("/rely", params={"ids": ids + ["pep:9999"]})).json()}
+    assert after["pep:101"]["reliable"] is False and after["pep:101"]["replaced_by"] == ["pep:102", "pep:105"]
+    assert after["pep:103"]["reliable"] is False and "pep:101" in after["pep:103"]["why"]
+    assert after[ans["answer_id"]]["reliable"] is False
+    assert after["pep:9999"] == {"id": "pep:9999", "reliable": None, "why": "not in the graph", "replaced_by": []}

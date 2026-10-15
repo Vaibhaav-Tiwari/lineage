@@ -1239,3 +1239,64 @@ WHERE $as_of IS NULL OR p.created <= date($as_of)
 RETURN p.number AS number
 ORDER BY coalesce(p.pagerank, 0) DESC LIMIT 1
 ```
+
+## Real effects of gated actions (lineage/memory/effects.py)
+
+### `ACTION_ANSWER`
+
+```cypher
+MATCH (x:Action {id: $id})-[:DERIVED_FROM]->(a:Answer)
+OPTIONAL MATCH (a)-[:DERIVED_FROM]->(e:Evidence)
+RETURN a.id AS id, a.question AS question, a.text AS text, collect(DISTINCT e.ref) AS refs
+```
+
+### `PUBLISH_FAQ`
+
+```cypher
+MERGE (f:FaqEntry {id: $id})
+SET f.answer_id = $answer_id, f.question = $question, f.answer = $answer, f.refs = $refs,
+    f.status = 'live', f.published_at = $now, f.withdrawn_reason = null, f.withdrawn_event = null
+RETURN f.id AS id
+```
+
+### `LIST_FAQ`
+
+```cypher
+MATCH (f:FaqEntry)
+RETURN f.id AS id, f.question AS question, f.answer AS answer, f.refs AS refs, f.status AS status,
+       f.published_at AS published_at, f.withdrawn_reason AS withdrawn_reason, f.withdrawn_at AS withdrawn_at
+ORDER BY f.published_at DESC
+```
+
+### `WITHDRAW_FAQ`
+
+```cypher
+MATCH (f:FaqEntry) WHERE f.answer_id IN $answer_ids AND f.status = 'live'
+SET f.status = 'withdrawn', f.withdrawn_reason = $reason, f.withdrawn_event = $event, f.withdrawn_at = $now
+RETURN count(f) AS n
+```
+
+### `RESTORE_FAQ`
+
+```cypher
+MATCH (f:FaqEntry {withdrawn_event: $event})
+SET f.status = 'live', f.withdrawn_reason = null, f.withdrawn_event = null, f.withdrawn_at = null
+```
+
+## "Can I rely on this?" for outside agents
+
+### `RELY_COMPANY`
+
+```cypher
+MATCH (n) WHERE n.id IN $ids
+OPTIONAL MATCH (s:PEP)-[:SUPERSEDES]->(n)
+RETURN n.id AS id, labels(n)[0] AS label, n.status AS status, coalesce(n.stale, false) AS stale,
+       n.stale_because AS why, collect(s.id) AS replaced_by
+```
+
+### `RELY_AGENT`
+
+```cypher
+MATCH (n) WHERE n.id IN $ids AND (n:Answer OR n:Belief)
+RETURN n.id AS id, coalesce(n.stale, false) OR coalesce(n.status, '') = 'stale' AS stale, n.stale_because AS why
+```

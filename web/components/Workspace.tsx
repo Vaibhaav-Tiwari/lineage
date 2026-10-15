@@ -28,9 +28,14 @@ function stepLabel(t: { name: string; input: any }): string {
     default: return t.name.replace(/_/g, " ");
   }
 }
-const n = (k: number, word: string) => `${k} ${word}${k === 1 ? "" : "s"}`;
+const n = (k: number, word: string, plural = `${word}s`) => `${k} ${k === 1 ? word : plural}`;
 
-type ActionItem = { id: string; status: "pending" | "done" | "blocked"; reason?: string };
+type ActionKind = "add_to_onboarding_faq" | "ask_owner_review";
+type ActionItem = { id: string; kind: ActionKind; status: "pending" | "done" | "blocked"; reason?: string; effect?: string };
+const ACTIONS: Record<ActionKind, { queue: string; what: string; node: string }> = {
+  add_to_onboarding_faq: { queue: "Queue: publish to the onboarding FAQ", what: "Publish this answer to the onboarding FAQ", node: "Publish to FAQ" },
+  ask_owner_review: { queue: "Queue: ask the owners to confirm", what: "Ask the owners of this part of Python to confirm it", node: "Ask owners" },
+};
 type Entry = { kind: "qa"; q: string; asOf: string | null; result?: AskResult; error?: string; actions: ActionItem[]; stale?: { note: string; at: string };
   frag?: Fragment; prev?: Fragment } // this answer's own graph; the graph it replaced (new topic)
   | { kind: "steward"; text: string; details?: string };
@@ -103,8 +108,8 @@ export default function Workspace() {
     const queued = qas.some((e) => e.actions.length > 0);
     const blocked = qas.some((e) => e.actions.some((a) => a.status === "blocked" && a.reason?.startsWith("blocked:")));
     if (!qas.length) return null;
-    if (!queued && !applied) return "Next: queue this answer for the onboarding FAQ, then open the red pin on the timeline to replay a real change.";
-    if (queued && !applied) return "Now open the red pin on the timeline and apply the change. Watch what goes stale.";
+    if (!queued && !applied) return "Next: queue this answer for the onboarding FAQ and run it, then open the red pin on the timeline to replay a real change.";
+    if (queued && !applied) return "Now open the red pin on the timeline and apply the change. Watch what goes stale, and check the FAQ in Memory.";
     if (applied && queued && !blocked) return "Press Run on the queued action. The Steward will refuse it and show you the chain of evidence that changed.";
     return "Try a follow-up question, drag the timeline dial back to 2020 and ask again, or open Organisation to see what happens if someone leaves.";
   }, [entries, events, hintsOff]);
@@ -154,16 +159,18 @@ export default function Workspace() {
     }
   }
 
-  async function queueAction(i: number, answerId: string, q: string) {
-    const { id } = await api.propose("add_to_onboarding_faq", { question: q }, [answerId]);
-    patchEntry(i, (e) => ({ ...e, actions: [...e.actions, { id, status: "pending" }] }));
-    setFragment((f) => mergeFragments(f, { nodes: [{ id, label: "Action", props: { kind: "Add to onboarding FAQ" } }], edges: [{ src: id, dst: answerId, type: "DERIVED_FROM" }] }));
+  async function queueAction(i: number, answerId: string, q: string, kind: ActionKind) {
+    const { id } = await api.propose(kind, { question: q }, [answerId]);
+    patchEntry(i, (e) => ({ ...e, actions: [...e.actions, { id, kind, status: "pending" }] }));
+    setFragment((f) => mergeFragments(f, { nodes: [{ id, label: "Action", props: { kind: ACTIONS[kind].node } }], edges: [{ src: id, dst: answerId, type: "DERIVED_FROM" }] }));
   }
 
   async function runAction(i: number, id: string) {
     try {
-      await api.execute(id);
-      patchEntry(i, (e) => ({ ...e, actions: e.actions.map((a) => (a.id === id ? { ...a, status: "done" } : a)) }));
+      const r = await api.execute(id);
+      const effect = r.effect?.kind === "faq" ? "Published. It will be withdrawn automatically if its evidence changes; see Memory."
+        : r.effect?.kind === "task" ? "Done: a review task is open on the shared board for the owners." : "Done.";
+      patchEntry(i, (e) => ({ ...e, actions: e.actions.map((a) => (a.id === id ? { ...a, status: "done", effect } : a)) }));
       setPath([]);
     } catch (err: any) {
       const detail = err.body?.detail ?? {};
@@ -232,7 +239,7 @@ export default function Workspace() {
           stale: e.result?.answer_id && h.answers.includes(e.result.answer_id) ? staleNote : e.stale,
           actions: e.actions.map((a) => (h.actions_blocked.includes(a.id) ? { ...a, status: "blocked" as const, reason: "Blocked by the Steward: it rests on knowledge that just changed. Run it to see why." } : a)),
         } : e),
-        { kind: "steward", text: rep.plain ?? rep.summary, details: `${rep.summary} I re-checked everything built on ${rep.changed.join(", ")}: ${n(h.answers.length, "answer")} and ${n(h.beliefs.length, "belief")} no longer hold, ${n(h.actions_blocked.length, "queued action")} on hold, and ${n(rep.fixtasks.length, "proposal")} that cite it now have a review task.` },
+        { kind: "steward", text: rep.plain ?? rep.summary, details: `${rep.summary} I re-checked everything built on ${rep.changed.join(", ")}: ${n(h.answers.length, "answer")} and ${n(h.beliefs.length, "belief")} no longer hold, ${n(h.actions_blocked.length, "queued action")} on hold, and ${n(rep.fixtasks.length, "proposal")} that cite it now have a review task.${rep.faq_withdrawn ? ` ${n(rep.faq_withdrawn, "published FAQ entry", "published FAQ entries")} withdrawn.` : ""}` },
       ]);
       setSelected(rep.changed[0]);
       setCardVersion((v) => v + 1);
@@ -338,15 +345,15 @@ export default function Workspace() {
                         <div className="actions">
                           {e.actions.map((a) => (
                             <div key={a.id} className={`action ${a.status}`}>
-                              <span className="what">Add this answer to the onboarding FAQ</span>
-                              {a.status === "done" && <span className="typed" style={{ color: "var(--pine)" }}>Added</span>}
+                              <span className="what">{ACTIONS[a.kind].what}</span>
                               {a.status !== "done" && <button className="btn" onClick={() => runAction(i, a.id)}>Run</button>}
+                              {a.status === "done" && a.effect && <span className="why done-note">{a.effect}</span>}
                               {a.status === "blocked" && a.reason && <span className="why">{a.reason}</span>}
                             </div>
                           ))}
-                          {e.actions.length === 0 && !e.stale && (
-                            <button className="btn quiet" onClick={() => queueAction(i, e.result!.answer_id!, e.q)}>Queue: add to onboarding FAQ</button>
-                          )}
+                          {!e.stale && (Object.keys(ACTIONS) as ActionKind[]).filter((k) => !e.actions.some((a) => a.kind === k)).map((k) => (
+                            <button key={k} className="btn quiet" onClick={() => queueAction(i, e.result!.answer_id!, e.q, k)}>{ACTIONS[k].queue}</button>
+                          ))}
                         </div>
                       )}
                     </>

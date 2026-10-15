@@ -3,7 +3,8 @@
     uv run python -m lineage.mcp_server        # stdio transport
 
 All tools are read-only on the company graph except `ask`, which writes the
-Historian's memory (that's how its answers can later go stale).
+Historian's memory (that's how its answers can later go stale). `can_i_rely_on`
+lets any outside agent check a fact before acting on it.
 """
 
 import json
@@ -65,6 +66,34 @@ async def departure_impact(person_id: str) -> str:
     db = await get_db()
     try:
         return _dump(await _departure(db, person_id, base=f"{PREFIX}:company"))
+    finally:
+        await db.aclose()
+
+
+@mcp.tool()
+async def can_i_rely_on(ids: list[str]) -> str:
+    """Before acting on a fact, check it still holds. Takes graph ids (e.g. pep:563, or a Historian answer id)
+    and returns, for each, whether it is still reliable, why not, and what replaced it."""
+    from lineage.memory.effects import rely
+
+    db = await get_db()
+    try:
+        agents = {"historian": db.select_graph(f"{PREFIX}:agent:historian")}
+        return _dump(await rely(db.select_graph(f"{PREFIX}:company"), agents, ids))
+    finally:
+        await db.aclose()
+
+
+@mcp.tool()
+async def onboarding_faq() -> str:
+    """The onboarding FAQ the agents have published, including entries withdrawn because their evidence changed."""
+    from lineage.db import ro
+    from lineage.graph import queries as Q
+
+    db = await get_db()
+    try:
+        g = db.select_graph(f"{PREFIX}:shared")
+        return _dump(await ro(g, Q.LIST_FAQ) if f"{PREFIX}:shared" in await db.list_graphs() else [])
     finally:
         await db.aclose()
 

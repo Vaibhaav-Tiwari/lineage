@@ -14,7 +14,7 @@ import secrets
 from datetime import date
 from typing import Callable
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, field_validator
 
@@ -220,10 +220,28 @@ def create_app(prefix: str = "lineage", llm_factory: Callable | None = None, emb
 
     @app.post("/actions/{aid}/execute")
     async def run_action(aid: str):
+        from lineage.memory.effects import perform
+
+        hg = st.historian_db.select_graph(st.name("agent", "historian"))
         try:
-            return await execute_action(st.historian_db.select_graph(st.name("agent", "historian")), aid)
+            done = await execute_action(hg, aid)
         except ActionBlocked as e:
             raise HTTPException(409, {"reason": e.reason, "path": e.path})
+        kind = (await ro(hg, Q.ACTION_NODE, {"id": aid}))[0]["kind"]
+        sdb = st.steward_db  # only the Steward's login may write the shared board
+        done["effect"] = await perform(kind, aid, historian_g=hg, shared_g=sdb.select_graph(st.name("shared")),
+                                       company_g=st.db.select_graph(st.name("company")))
+        return done
+
+    @app.get("/faq")
+    async def faq():
+        return await ro(st.db.select_graph(st.name("shared")), Q.LIST_FAQ)
+
+    @app.get("/rely")
+    async def can_i_rely_on(ids: list[str] = Query(...)):
+        from lineage.memory.effects import rely
+
+        return await rely(st.db.select_graph(st.name("company")), agent_graphs(st.db), ids)
 
     # --- Shared coordination board ------------------------------------------------------
 

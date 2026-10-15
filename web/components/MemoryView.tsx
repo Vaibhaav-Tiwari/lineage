@@ -15,6 +15,7 @@ type Pending = { area: string; eid: string; question: string; left: number };
 
 export default function MemoryView({ uid }: { uid: string }) {
   const [beliefs, setBeliefs] = useState<any[]>([]);
+  const [faq, setFaq] = useState<any[]>([]);
   const [interests, setInterests] = useState<any[]>([]);
   const [why, setWhy] = useState<Record<string, any[]>>({});
   const [proof, setProof] = useState<string | null>(null);
@@ -24,6 +25,7 @@ export default function MemoryView({ uid }: { uid: string }) {
 
   async function load() {
     setBeliefs(await api.beliefs().catch(() => []));
+    setFaq(await api.faq().catch(() => []));
     const ints = await api.interests(uid).catch(() => []);
     setInterests(ints);
     const w: Record<string, any[]> = {};
@@ -69,6 +71,21 @@ export default function MemoryView({ uid }: { uid: string }) {
           <div key={b.id} className={`belief ${b.status}`}>
             <Tip text={STATUS_HELP[b.status] ?? b.status}><span className={`pill ${b.status}`} tabIndex={0}>{b.status}</span></Tip>
             <span><span className="txt">{b.text}</span>{b.stale_because && <span className="a-note" style={{ display: "block" }}>No longer current: {b.stale_because}</span>}</span>
+          </div>
+        ))}
+      </section>
+      <section>
+        <h2>Onboarding FAQ</h2>
+        <p className="sub">Answers the agents published after the action gate let them through. When an answer&rsquo;s evidence changes, the Steward withdraws the entry and says why.</p>
+        {faq.length === 0 && <p className="working">Nothing published yet. Queue &ldquo;publish to the onboarding FAQ&rdquo; on an answer and run it.</p>}
+        {faq.map((f) => (
+          <div key={f.id} className={`faq ${f.status}`}>
+            <div className="row">
+              <strong>{f.question}</strong>
+              <span className={`pill ${f.status === "live" ? "committed" : "stale"}`}>{f.status === "live" ? "live" : "withdrawn"}</span>
+            </div>
+            <p className={f.status === "live" ? "" : "struck-static"}>{f.answer.replace(/\[\d+\]/g, "")}</p>
+            {f.status !== "live" && <p className="margin-note">Withdrawn: {f.withdrawn_reason}</p>}
           </div>
         ))}
       </section>

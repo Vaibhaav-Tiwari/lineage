@@ -29,6 +29,7 @@ export type StewardReport = {
   paths: Fragment;
   agents: Record<string, { beliefs: string[]; answers: string[]; actions_blocked: string[] }>;
   fixtasks: string[];
+  faq_withdrawn?: number;
   plain?: string;
 };
 
@@ -51,6 +52,7 @@ export const api = {
     call<{ id: string }>("/actions", { method: "POST", body: JSON.stringify({ kind, payload, derived_from }) }),
   execute: (id: string) => call<any>(`/actions/${id}/execute`, { method: "POST" }),
   fixtasks: () => call<any[]>("/fixtasks"),
+  faq: () => call<any[]>("/faq"),
   claim: (agent: string) => call<any>("/fixtasks/claim", { method: "POST", body: JSON.stringify({ agent }) }),
   drift: () => call<any[]>("/org/drift"),
   clusters: () => call<any[]>("/org/clusters"),
@@ -168,7 +170,7 @@ export function nodeTitle(n: GNode): string {
     case "Event": return "Change event";
     case "Area": return p.name ?? n.id.split(":")[1];
     case "Answer": return "Historian's answer";
-    case "Action": return "Add to FAQ";
+    case "Action": return p.kind && p.kind.length < 24 ? p.kind : "Queued action";
     case "More": return `+${p.count} more`;
     default: return n.id;
   }

@@ -26,10 +26,14 @@ async def apply_event(slug: str, *, company_g, agent_graphs: dict, shared_g=None
         "agents": dict(zip(names, results)),
         "fixtasks": [],
     }
+    report["faq_withdrawn"] = 0
     if shared_g is not None:
         from lineage.memory.coord import open_fix_tasks_for
+        from lineage.memory.effects import withdraw_faq
 
         report["fixtasks"] = await open_fix_tasks_for(shared_g, company_g, ripple, reason, event=slug)
+        stale_answers = sorted({a for r in results for a in r.get("answers", [])})
+        report["faq_withdrawn"] = await withdraw_faq(shared_g, stale_answers, reason, slug)
     from lineage.graph.plain import explain_ripple
 
     report["plain"] = explain_ripple(report)
@@ -50,3 +54,4 @@ async def reset_event(company_g, agent_graphs, slug: str, shared_g=None) -> None
         await clear_stale(ag)
     if shared_g is not None:
         await delete_tasks_of_event(shared_g, slug)
+        await rw(shared_g, Q.RESTORE_FAQ, {"event": slug})

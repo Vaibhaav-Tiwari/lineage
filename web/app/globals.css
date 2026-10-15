@@ -431,3 +431,10 @@ sup.fn button:hover { text-decoration: underline; }
   font-size: var(--step--1); color: var(--ink); box-shadow: 0 1px 3px rgba(24, 35, 58, 0.12);
 }
 .replay-caption .step { color: var(--brass); white-space: nowrap; }
+
+/* onboarding FAQ (Memory) */
+.faq { padding: 0.6rem 0; border-bottom: 1px solid var(--rule); }
+.faq .row { display: flex; gap: 0.6rem; align-items: baseline; justify-content: space-between; }
+.faq p { margin: 0.25rem 0 0; }
+.struck-static { color: var(--ink-soft); text-decoration: line-through; text-decoration-color: var(--stamp); text-decoration-thickness: 1.5px; }
+.done-note { color: var(--pine); }
