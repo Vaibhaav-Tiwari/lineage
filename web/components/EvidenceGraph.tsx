@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Core } from "cytoscape";
-import { Fragment, nodeDetail, nodeTitle } from "@/lib/api";
+import { Fragment, GNode, nodeDetail, nodeTitle } from "@/lib/api";
+import { answerSlip, CARD, decisionStamp, Fonts, proposalCard, SLIP, STAMP } from "@/lib/cards";
 
 export type Wave = { origin: string[]; stale: string[]; key: number } | null;
 
@@ -11,6 +12,9 @@ const HATCH =
   encodeURIComponent(
     `<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8'><path d='M-2,2 l4,-4 M0,8 l8,-8 M6,10 l4,-4' stroke='#7d8697' stroke-width='1' stroke-opacity='0.55'/></svg>`,
   );
+
+// drawn artwork is 3x resolution: always size it to the node, never to its natural pixels
+const FILL = { "background-fit": "none", "background-width": "100%", "background-height": "100%", "background-clip": "none" };
 
 function stylesheet(font: string, typed: string): any[] {
   return [
@@ -38,7 +42,10 @@ function stylesheet(font: string, typed: string): any[] {
         width: 1, "line-color": "#9aa3b2", "curve-style": "bezier", "target-arrow-shape": "triangle", "target-arrow-color": "#9aa3b2",
         "arrow-scale": 0.7, "transition-property": "line-color, width", "transition-duration": 500 } },
     { selector: "edge[type = 'MORE']", style: { "line-style": "dashed", "target-arrow-shape": "none" } },
-    { selector: "edge[type = 'SUPERSEDES']", style: { width: 2.2, "line-color": "#c2273d", "target-arrow-color": "#c2273d" } },
+    { selector: "edge[type = 'SUPERSEDES']", style: {
+        width: 2.2, "line-color": "#c2273d", "target-arrow-color": "#c2273d", label: "replaces", "font-family": font, "font-style": "italic",
+        "font-size": 10, color: "#c2273d", "text-rotation": "autorotate", "text-background-color": "#eef1f3", "text-background-opacity": 1,
+        "text-background-padding": "1px" } },
     { selector: "edge:selected, edge.labelled", style: {
         label: "data(type)", "font-family": font, "font-size": 9, color: "#4a5468", "text-rotation": "autorotate",
         "text-background-color": "#eef1f3", "text-background-opacity": 1 } },
@@ -51,7 +58,42 @@ function stylesheet(font: string, typed: string): any[] {
     { selector: "edge.path", style: { "line-color": "#c2273d", "target-arrow-color": "#c2273d", width: 3, label: "data(type)",
         "font-size": 9, color: "#c2273d", "text-background-color": "#eef1f3", "text-background-opacity": 1 } },
     { selector: "node:selected", style: { "overlay-color": "#2f5d8c", "overlay-opacity": 0.12, "overlay-padding": 6 } },
+    // ---- archive vocabulary: cards, names, stamps, slips ----
+    { selector: "node[label = 'PEP']", style: {
+        shape: "rectangle", width: CARD.w, height: CARD.h, label: "", "background-image": "data(art)", ...FILL,
+        "background-color": "#f8f9fa", "border-width": 1.2, "border-color": "#18233a", "border-style": "solid" } },
+    { selector: "node[label = 'PEP'].stale", style: { "background-image": "data(artStale)", "border-style": "dashed", "border-color": "#7d8697" } },
+    { selector: "node[label = 'PEP'].cited", style: { "border-width": 2.4, "border-color": "#2f5d8c" } },
+    { selector: "node[label = 'Person']", style: {
+        width: 9, height: 9, "background-color": "#f8f9fa", "background-image": "none", "border-width": 1.5, "border-color": "#2f5d8c", "border-style": "solid",
+        "text-halign": "right", "text-valign": "center", "text-margin-x": 5, "text-margin-y": 0, "font-size": 13, "text-max-width": 160 } },
+    { selector: "node[label = 'Person'].cited", style: { "border-width": 2.5 } },
+    { selector: "node[label = 'Person'].stale", style: { opacity: 0.5 } },
+    { selector: "node[label = 'Decision'], node[label = 'Answer']", style: {
+        shape: "rectangle", label: "", "background-image": "data(art)", ...FILL, "background-opacity": 0,
+        "border-width": 0, "background-image-opacity": 1 } },
+    { selector: "node[label = 'Decision']", style: { width: STAMP.w, height: STAMP.h } },
+    { selector: "node[label = 'Answer']", style: { width: SLIP.w, height: SLIP.h } },
+    { selector: "node[label = 'Decision'].stale", style: { "background-image": "data(art)", "background-opacity": 0, "border-width": 0, opacity: 0.45 } },
+    { selector: "node[label = 'Answer'].stale", style: { "background-image": "data(artStale)", "background-opacity": 0, "border-width": 0 } },
+    { selector: "node[label = 'Decision'].cited, node[label = 'Answer'].cited", style: { "border-width": 0 } },
   ];
+}
+
+const SUPERSEDED = new Set(["Superseded", "Replaced"]);
+
+/** Artwork for the node kinds that are drawn rather than styled. */
+function art(n: GNode, f: Fonts | null): Record<string, string> {
+  if (!f) return {};
+  const p = n.props ?? {};
+  if (n.label === "PEP") {
+    const num = String(p.number ?? n.id.split(":")[1]), title = String(p.title ?? "");
+    const gone = SUPERSEDED.has(p.status);
+    return { art: proposalCard(f, num, title, false, gone), artStale: proposalCard(f, num, title, true, gone) };
+  }
+  if (n.label === "Decision") return { art: decisionStamp(f, String(p.kind ?? ""), p.at ? String(p.at).slice(0, 10) : undefined) };
+  if (n.label === "Answer") return { art: answerSlip(f, false), artStale: answerSlip(f, true) };
+  return {};
 }
 
 export default function EvidenceGraph({
@@ -68,6 +110,8 @@ export default function EvidenceGraph({
   const host = useRef<HTMLDivElement>(null);
   const cyRef = useRef<Core | null>(null);
   const timers = useRef<number[]>([]);
+  const fonts = useRef<Fonts | null>(null);
+  const [ready, setReady] = useState(false);
   const [tip, setTip] = useState<{ x: number; y: number; title: string; detail: string; stale: boolean } | null>(null);
 
   useEffect(() => {
@@ -78,8 +122,12 @@ export default function EvidenceGraph({
       try { cytoscape.use(fcose); } catch { /* already registered */ }
       if (cancelled || !host.current) return;
       const css = getComputedStyle(document.documentElement);
-      const font = `${css.getPropertyValue("--font-text").trim() || "Georgia"}, Georgia, serif`;
+      const font = `"Libre Caslon Condensed", Georgia, serif`;
       const typed = `${css.getPropertyValue("--font-typed").trim() || "Courier New"}, monospace`;
+      // the node artwork is drawn on a canvas, so the faces must be loaded before the first drawing
+      await Promise.all([`22px ${font}`, `italic 12px ${font}`, `9px ${typed}`].map((q) => document.fonts.load(q).catch(() => null)));
+      fonts.current = { serif: font, typed };
+      if (cancelled || !host.current) return;
       const cy = cytoscape({ container: host.current, style: stylesheet(font, typed), wheelSensitivity: 0.25, minZoom: 0.2, maxZoom: 3 });
       cy.on("tap", "node", (e) => onSelect(e.target.id()));
       cy.on("mouseover", "node", (e) => {
@@ -94,6 +142,7 @@ export default function EvidenceGraph({
       const ro = new ResizeObserver(() => { cy.resize(); });
       ro.observe(host.current);
       (cy as any)._ro = ro;
+      setReady(true);
     })();
     return () => { cancelled = true; (cyRef.current as any)?._ro?.disconnect(); cyRef.current?.destroy(); cyRef.current = null; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -109,7 +158,7 @@ export default function EvidenceGraph({
       c.elements().filter((el) => el.isNode() && !ids.has(el.id())).remove();
       const added: any[] = [];
       for (const n of fragment.nodes) {
-        const data = { id: n.id, label: n.label, title: nodeTitle(n), detail: nodeDetail(n), kind: n.props?.kind ?? "" };
+        const data = { id: n.id, label: n.label, title: nodeTitle(n), detail: nodeDetail(n), kind: n.props?.kind ?? "", ...art(n, fonts.current) };
         const el = c.getElementById(n.id);
         if (el.nonempty()) el.data(data);
         else added.push({ group: "nodes", data });
@@ -122,11 +171,11 @@ export default function EvidenceGraph({
       if (added.length) {
         c.add(added);
         c.layout({ name: "fcose", animate: true, animationDuration: 650, randomize: c.nodes().length === added.filter((a) => a.group === "nodes").length,
-                   nodeRepulsion: 9000, idealEdgeLength: 80, padding: 40, nodeDimensionsIncludeLabels: true } as any).run();
+                   nodeRepulsion: 20000, idealEdgeLength: 115, nodeSeparation: 110, padding: 40, nodeDimensionsIncludeLabels: true } as any).run();
       }
     }, cy ? 0 : 120);
     return () => window.clearTimeout(t);
-  }, [fragment]);
+  }, [fragment, ready]);
 
   useEffect(() => {
     const c = cyRef.current;

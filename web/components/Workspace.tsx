@@ -163,7 +163,9 @@ export default function Workspace() {
         ? `${proposal(ev.pep)} was replaced by ${ev.by.map((b) => `PEP ${b}`).join(" and ")}.`
         : rep.summary;
       const staleNote = { note, at: ev?.at ?? "" };
-      setFragment((f) => mergeFragments(f, rep.paths));
+      // the replaced proposal's card shows its new status (struck number, "superseded")
+      const replaced: Fragment = ev?.kind === "supersede" ? { nodes: [{ id: ev.pep, label: "PEP", props: { status: "Superseded" } }], edges: [] } : EMPTY;
+      setFragment((f) => mergeFragments(mergeFragments(f, rep.paths), replaced));
       setStale((s) => new Set([...s, ...staleIds]));
       setWave({ origin: rep.changed, stale: staleIds, key: Date.now() });
       setEntries((xs) => [
