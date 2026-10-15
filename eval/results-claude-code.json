@@ -1,0 +1,276 @@
+[
+ {
+  "q": "Who announced the acceptance of PEP 649, and when?",
+  "correct": true,
+  "citation_recall": 1.0,
+  "missing": [],
+  "abstained": false,
+  "seconds": 15.2,
+  "tools": 0,
+  "error": null,
+  "tool_ms": []
+ },
+ {
+  "q": "Who announced that PEP 695, the type parameter syntax, was accepted?",
+  "correct": true,
+  "citation_recall": 1.0,
+  "missing": [],
+  "abstained": false,
+  "seconds": 11.4,
+  "tools": 0,
+  "error": null,
+  "tool_ms": []
+ },
+ {
+  "q": "Who announced the decision on PEP 701?",
+  "correct": true,
+  "citation_recall": 1.0,
+  "missing": [],
+  "abstained": false,
+  "seconds": 14.1,
+  "tools": 0,
+  "error": null,
+  "tool_ms": []
+ },
+ {
+  "q": "When was PEP 749 accepted, and who announced it?",
+  "correct": true,
+  "citation_recall": 1.0,
+  "missing": [],
+  "abstained": false,
+  "seconds": 12.1,
+  "tools": 0,
+  "error": null,
+  "tool_ms": []
+ },
+ {
+  "q": "Who announced the acceptance of PEP 688?",
+  "correct": true,
+  "citation_recall": 1.0,
+  "missing": [],
+  "abstained": false,
+  "seconds": 11.7,
+  "tools": 0,
+  "error": null,
+  "tool_ms": []
+ },
+ {
+  "q": "Who announced that PEP 692 was accepted?",
+  "correct": true,
+  "citation_recall": 1.0,
+  "missing": [],
+  "abstained": false,
+  "seconds": 8.6,
+  "tools": 0,
+  "error": null,
+  "tool_ms": []
+ },
+ {
+  "q": "Who accepted PEP 740?",
+  "correct": true,
+  "citation_recall": 1.0,
+  "missing": [],
+  "abstained": false,
+  "seconds": 11.5,
+  "tools": 0,
+  "error": null,
+  "tool_ms": []
+ },
+ {
+  "q": "Who wrote PEP 572, assignment expressions?",
+  "correct": true,
+  "citation_recall": 1.0,
+  "missing": [],
+  "abstained": false,
+  "seconds": 8.3,
+  "tools": 0,
+  "error": null,
+  "tool_ms": []
+ },
+ {
+  "q": "Who are the authors of PEP 484, type hints?",
+  "correct": true,
+  "citation_recall": 1.0,
+  "missing": [],
+  "abstained": false,
+  "seconds": 11.2,
+  "tools": 1,
+  "error": null,
+  "tool_ms": [
+   [
+    "decision_path",
+    53.1
+   ]
+  ]
+ },
+ {
+  "q": "Which PEP superseded PEP 241?",
+  "correct": true,
+  "citation_recall": 1.0,
+  "missing": [],
+  "abstained": false,
+  "seconds": 9.0,
+  "tools": 1,
+  "error": null,
+  "tool_ms": [
+   [
+    "decision_path",
+    28.3
+   ]
+  ]
+ },
+ {
+  "q": "Which PEP superseded PEP 5, the guidelines for language evolution?",
+  "correct": true,
+  "citation_recall": 1.0,
+  "missing": [],
+  "abstained": false,
+  "seconds": 10.6,
+  "tools": 1,
+  "error": null,
+  "tool_ms": [
+   [
+    "decision_path",
+    38.7
+   ]
+  ]
+ },
+ {
+  "q": "What superseded PEP 345, metadata for Python software packages 1.2?",
+  "correct": true,
+  "citation_recall": 1.0,
+  "missing": [],
+  "abstained": false,
+  "seconds": 13.2,
+  "tools": 1,
+  "error": null,
+  "tool_ms": [
+   [
+    "decision_path",
+    85.0
+   ]
+  ]
+ },
+ {
+  "q": "Who wrote PEP 634 on structural pattern matching?",
+  "correct": true,
+  "citation_recall": 1.0,
+  "missing": [],
+  "abstained": false,
+  "seconds": 12.0,
+  "tools": 1,
+  "error": null,
+  "tool_ms": [
+   [
+    "decision_path",
+    152.3
+   ]
+  ]
+ },
+ {
+  "q": "Who wrote PEP 20, the Zen of Python?",
+  "correct": true,
+  "citation_recall": 1.0,
+  "missing": [],
+  "abstained": false,
+  "seconds": 10.4,
+  "tools": 1,
+  "error": null,
+  "tool_ms": [
+   [
+    "decision_path",
+    68.2
+   ]
+  ]
+ },
+ {
+  "q": "Who should I ask about asyncio today? Who is actually committing to it?",
+  "correct": true,
+  "citation_recall": 1.0,
+  "missing": [],
+  "abstained": false,
+  "seconds": 20.1,
+  "tools": 1,
+  "error": null,
+  "tool_ms": [
+   [
+    "who_knows",
+    78.0
+   ]
+  ]
+ },
+ {
+  "q": "Who is actively working on the typing module right now?",
+  "correct": true,
+  "citation_recall": 1.0,
+  "missing": [],
+  "abstained": false,
+  "seconds": 14.8,
+  "tools": 1,
+  "error": null,
+  "tool_ms": [
+   [
+    "who_knows",
+    22.7
+   ]
+  ]
+ },
+ {
+  "q": "What was the status of PEP 563 in mid-2020?",
+  "correct": true,
+  "citation_recall": 1.0,
+  "missing": [],
+  "abstained": false,
+  "seconds": 14.3,
+  "tools": 2,
+  "error": null,
+  "tool_ms": [
+   [
+    "pep_timeline",
+    58.9
+   ],
+   [
+    "decision_path",
+    27.1
+   ]
+  ]
+ },
+ {
+  "q": "How does Rust's borrow checker handle lifetimes?",
+  "correct": true,
+  "citation_recall": null,
+  "missing": [],
+  "abstained": true,
+  "seconds": 8.7,
+  "tools": 0,
+  "error": null,
+  "tool_ms": []
+ },
+ {
+  "q": "What is the population of Paris?",
+  "correct": true,
+  "citation_recall": null,
+  "missing": [],
+  "abstained": true,
+  "seconds": 10.1,
+  "tools": 0,
+  "error": null,
+  "tool_ms": []
+ },
+ {
+  "q": "Which JavaScript framework did the Steering Council pick for the python.org website redesign?",
+  "correct": true,
+  "citation_recall": null,
+  "missing": [],
+  "abstained": true,
+  "seconds": 32.4,
+  "tools": 1,
+  "error": null,
+  "tool_ms": [
+   [
+    "search",
+    165.8
+   ]
+  ]
+ }
+]

@@ -60,3 +60,15 @@ def test_queries_doc_covers_every_constant():
     assert {d["name"] for d in docs} >= names - {"_TRIPLE", "_CARD", "_RIPPLE_SOFT"}
     assert all(d["cypher"].strip() for d in docs)
     assert any("serialises writes" in d["comment"] or "serialized" in d["comment"].lower() or "atomic" in d["comment"].lower() for d in docs)
+
+
+def test_summarize_merges_partial_runs():
+    from eval.run_eval import summarize
+
+    qs = [{"q": "a", "facts": [["x"]], "expected_ids": ["pep:1"]}, {"q": "b", "expect_abstain": True}]
+    rows = [
+        {"q": "a", "correct": True, "citation_recall": 1.0, "missing": [], "abstained": False, "seconds": 2.0, "tools": 1, "error": None, "tool_ms": [["decision_path", 4.0]]},
+        {"q": "b", "correct": True, "citation_recall": None, "missing": [], "abstained": True, "seconds": 1.0, "tools": 0, "error": None, "tool_ms": []},
+    ]
+    s, lat = summarize(rows, qs)
+    assert s["correct"] == 2 and s["n"] == 2 and s["abstention"] == "1/1" and lat["decision_path"]["calls"] == 1

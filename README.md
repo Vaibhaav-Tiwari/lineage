@@ -192,9 +192,9 @@ MERGE (a:Agent {name: $agent}) MERGE (a)-[:CLAIMED {until: $until}]->(t)
 | Backend | Correct | Citation recall | Correct abstentions | Ripple recall / precision |
 |---|---|---|---|---|
 | graph-only (no LLM) | **20/20** | **100%** | **3/3** | **100% / 100%** |
-| Claude (Opus 5.5 via Claude Code) | [eval/results-claude-code.md](eval/results-claude-code.md) | | | |
+| Claude Opus 5.5 (via Claude Code) | **20/20** | **100%** | **3/3** | **100% / 100%** |
 
-Graph tool latency on the real graph: `decision_path` **p50 3.7 ms**, `search` p50 15 ms ([eval/results-graph-only.md](eval/results-graph-only.md)). A full what-if (copy 110 MB, delete, WCC twice, drop the fork) takes about 4.5 s.
+Claude answers take a median of **11.6 s** per question (1–2 graph tool calls each) — [eval/results-claude-code.md](eval/results-claude-code.md). Graph tool latency on the real graph: `decision_path` **p50 3.7 ms**, `search` p50 15 ms ([eval/results-graph-only.md](eval/results-graph-only.md)). A full what-if (copy 110 MB, delete, WCC twice, drop the fork) takes about 4.5 s.
 
 The eval caught three real bugs, all fixed with regression tests:
 - expert ranking by recency instead of volume;
