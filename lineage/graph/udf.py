@@ -37,5 +37,21 @@ falkor.register('in_window', in_window);
 """
 
 
-async def ensure_udfs(db) -> None:
-    await db.connection.execute_command("GRAPH.UDF", "LOAD", "REPLACE", LIBRARY, SOURCE)
+def _dec(x):
+    return x.decode() if isinstance(x, bytes) else x
+
+
+async def ensure_udfs(db) -> str:
+    """Load the library only if it is missing or its code changed. Replacing a JavaScript library while other
+    clients' queries are using it crashed FalkorDB 6.0.2 (a QuickJS assertion in JS_FreeRuntime), so an
+    unchanged library is never reloaded. UDFs persist in the database snapshot across restarts."""
+    listed = await db.connection.execute_command("GRAPH.UDF", "LIST", LIBRARY, "WITHCODE")
+    for lib in listed or []:
+        fields = dict(zip(map(_dec, lib[::2]), lib[1::2]))
+        if _dec(fields.get("library_name")) == LIBRARY:
+            if _dec(fields.get("library_code")) == SOURCE:
+                return "unchanged"
+            await db.connection.execute_command("GRAPH.UDF", "LOAD", "REPLACE", LIBRARY, SOURCE)
+            return "replaced"
+    await db.connection.execute_command("GRAPH.UDF", "LOAD", LIBRARY, SOURCE)
+    return "loaded"

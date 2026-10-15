@@ -1,0 +1,586 @@
+{
+  "a": {
+    "rows": [
+      {
+        "q": "Who announced the acceptance of PEP 649, and when?",
+        "kind": "fact",
+        "correct": false,
+        "note": "missing: 2023-05-08"
+      },
+      {
+        "q": "Who announced that PEP 695, the type parameter syntax, was accepted?",
+        "kind": "fact",
+        "correct": true,
+        "note": "facts found in top 5"
+      },
+      {
+        "q": "Who announced the decision on PEP 701?",
+        "kind": "fact",
+        "correct": false,
+        "note": "missing: Thomas Wouters"
+      },
+      {
+        "q": "When was PEP 749 accepted, and who announced it?",
+        "kind": "fact",
+        "correct": false,
+        "note": "missing: 2025-05-05"
+      },
+      {
+        "q": "Who announced the acceptance of PEP 688?",
+        "kind": "fact",
+        "correct": false,
+        "note": "missing: Pablo Galindo"
+      },
+      {
+        "q": "Who announced that PEP 692 was accepted?",
+        "kind": "fact",
+        "correct": true,
+        "note": "facts found in top 5"
+      },
+      {
+        "q": "Who accepted PEP 740?",
+        "kind": "fact",
+        "correct": true,
+        "note": "facts found in top 5"
+      },
+      {
+        "q": "Who wrote PEP 572, assignment expressions?",
+        "kind": "fact",
+        "correct": false,
+        "note": "missing: Guido"
+      },
+      {
+        "q": "Who are the authors of PEP 484, type hints?",
+        "kind": "fact",
+        "correct": true,
+        "note": "facts found in top 5"
+      },
+      {
+        "q": "Which PEP superseded PEP 241?",
+        "kind": "fact",
+        "correct": false,
+        "note": "missing: 314"
+      },
+      {
+        "q": "Which PEP superseded PEP 5, the guidelines for language evolution?",
+        "kind": "fact",
+        "correct": true,
+        "note": "facts found in top 5"
+      },
+      {
+        "q": "What superseded PEP 345, metadata for Python software packages 1.2?",
+        "kind": "fact",
+        "correct": true,
+        "note": "facts found in top 5"
+      },
+      {
+        "q": "Who wrote PEP 634 on structural pattern matching?",
+        "kind": "fact",
+        "correct": true,
+        "note": "facts found in top 5"
+      },
+      {
+        "q": "Who wrote PEP 20, the Zen of Python?",
+        "kind": "fact",
+        "correct": true,
+        "note": "facts found in top 5"
+      },
+      {
+        "q": "Who should I ask about asyncio today? Who is actually committing to it?",
+        "kind": "fact",
+        "correct": false,
+        "note": "missing: deadlovelll, kumaraditya303"
+      },
+      {
+        "q": "Who is actively working on the typing module right now?",
+        "kind": "fact",
+        "correct": true,
+        "note": "facts found in top 5"
+      },
+      {
+        "q": "What was the status of PEP 563 in mid-2020?",
+        "kind": "as-of",
+        "correct": true,
+        "note": "facts found in top 5"
+      },
+      {
+        "q": "How does Rust's borrow checker handle lifetimes?",
+        "kind": "out-of-corpus",
+        "correct": false,
+        "note": "returned 5 passages; plain search has no notion of 'not in the archive'"
+      },
+      {
+        "q": "What is the population of Paris?",
+        "kind": "out-of-corpus",
+        "correct": false,
+        "note": "returned 5 passages; plain search has no notion of 'not in the archive'"
+      },
+      {
+        "q": "Which JavaScript framework did the Steering Council pick for the python.org website redesign?",
+        "kind": "out-of-corpus",
+        "correct": false,
+        "note": "returned 5 passages; plain search has no notion of 'not in the archive'"
+      }
+    ],
+    "plain_correct": 10,
+    "total": 20,
+    "lineage": {
+      "graph-only": 20,
+      "claude-code": 20
+    }
+  },
+  "b": {
+    "rows": [
+      {
+        "pep": 5,
+        "title": "Guidelines for Language Evolution",
+        "by": [
+          387
+        ],
+        "plain_top": 596,
+        "plain_top_is_replaced": false,
+        "plain_shows_replacement": true,
+        "lineage_flags_and_names_replacement": true
+      },
+      {
+        "pep": 102,
+        "title": "Doing Python Micro Releases",
+        "by": [
+          101
+        ],
+        "plain_top": 102,
+        "plain_top_is_replaced": true,
+        "plain_shows_replacement": true,
+        "lineage_flags_and_names_replacement": true
+      },
+      {
+        "pep": 215,
+        "title": "String Interpolation",
+        "by": [
+          292
+        ],
+        "plain_top": 215,
+        "plain_top_is_replaced": true,
+        "plain_shows_replacement": true,
+        "lineage_flags_and_names_replacement": true
+      },
+      {
+        "pep": 216,
+        "title": "Docstring Format",
+        "by": [
+          287
+        ],
+        "plain_top": 216,
+        "plain_top_is_replaced": true,
+        "plain_shows_replacement": true,
+        "lineage_flags_and_names_replacement": true
+      },
+      {
+        "pep": 241,
+        "title": "Metadata for Python Software Packages",
+        "by": [
+          314
+        ],
+        "plain_top": 314,
+        "plain_top_is_replaced": false,
+        "plain_shows_replacement": true,
+        "lineage_flags_and_names_replacement": true
+      },
+      {
+        "pep": 245,
+        "title": "Python Interface Syntax",
+        "by": [
+          443,
+          3124
+        ],
+        "plain_top": 245,
+        "plain_top_is_replaced": true,
+        "plain_shows_replacement": true,
+        "lineage_flags_and_names_replacement": true
+      },
+      {
+        "pep": 246,
+        "title": "Object Adaptation",
+        "by": [
+          443,
+          3124
+        ],
+        "plain_top": 246,
+        "plain_top_is_replaced": true,
+        "plain_shows_replacement": true,
+        "lineage_flags_and_names_replacement": true
+      },
+      {
+        "pep": 247,
+        "title": "API for Cryptographic Hash Functions",
+        "by": [
+          452
+        ],
+        "plain_top": 452,
+        "plain_top_is_replaced": false,
+        "plain_shows_replacement": true,
+        "lineage_flags_and_names_replacement": true
+      },
+      {
+        "pep": 248,
+        "title": "Python Database API Specification v1.0",
+        "by": [
+          249
+        ],
+        "plain_top": 596,
+        "plain_top_is_replaced": false,
+        "plain_shows_replacement": true,
+        "lineage_flags_and_names_replacement": true
+      },
+      {
+        "pep": 291,
+        "title": "Backward Compatibility for the Python 2 Standard Library",
+        "by": [
+          387
+        ],
+        "plain_top": 596,
+        "plain_top_is_replaced": false,
+        "plain_shows_replacement": true,
+        "lineage_flags_and_names_replacement": true
+      },
+      {
+        "pep": 314,
+        "title": "Metadata for Python Software Packages 1.1",
+        "by": [
+          345
+        ],
+        "plain_top": 596,
+        "plain_top_is_replaced": false,
+        "plain_shows_replacement": true,
+        "lineage_flags_and_names_replacement": true
+      },
+      {
+        "pep": 333,
+        "title": "Python Web Server Gateway Interface v1.0",
+        "by": [
+          3333
+        ],
+        "plain_top": 596,
+        "plain_top_is_replaced": false,
+        "plain_shows_replacement": true,
+        "lineage_flags_and_names_replacement": true
+      },
+      {
+        "pep": 345,
+        "title": "Metadata for Python Software Packages 1.2",
+        "by": [
+          426,
+          566
+        ],
+        "plain_top": 314,
+        "plain_top_is_replaced": false,
+        "plain_shows_replacement": true,
+        "lineage_flags_and_names_replacement": true
+      },
+      {
+        "pep": 354,
+        "title": "Enumerations in Python",
+        "by": [
+          435
+        ],
+        "plain_top": 279,
+        "plain_top_is_replaced": false,
+        "plain_shows_replacement": true,
+        "lineage_flags_and_names_replacement": true
+      },
+      {
+        "pep": 381,
+        "title": "Mirroring infrastructure for PyPI",
+        "by": [
+          449,
+          464
+        ],
+        "plain_top": 381,
+        "plain_top_is_replaced": true,
+        "plain_shows_replacement": true,
+        "lineage_flags_and_names_replacement": true
+      },
+      {
+        "pep": 382,
+        "title": "Namespace Packages",
+        "by": [
+          402
+        ],
+        "plain_top": 382,
+        "plain_top_is_replaced": true,
+        "plain_shows_replacement": true,
+        "lineage_flags_and_names_replacement": true
+      },
+      {
+        "pep": 386,
+        "title": "Changing the version comparison module in Distutils",
+        "by": [
+          440
+        ],
+        "plain_top": 776,
+        "plain_top_is_replaced": false,
+        "plain_shows_replacement": true,
+        "lineage_flags_and_names_replacement": true
+      },
+      {
+        "pep": 397,
+        "title": "Python launcher for Windows",
+        "by": [
+          773
+        ],
+        "plain_top": 397,
+        "plain_top_is_replaced": true,
+        "plain_shows_replacement": true,
+        "lineage_flags_and_names_replacement": true
+      },
+      {
+        "pep": 409,
+        "title": "Suppressing exception context",
+        "by": [
+          415
+        ],
+        "plain_top": 409,
+        "plain_top_is_replaced": true,
+        "plain_shows_replacement": true,
+        "lineage_flags_and_names_replacement": true
+      },
+      {
+        "pep": 422,
+        "title": "Simpler customisation of class creation",
+        "by": [
+          487
+        ],
+        "plain_top": 422,
+        "plain_top_is_replaced": true,
+        "plain_shows_replacement": true,
+        "lineage_flags_and_names_replacement": true
+      },
+      {
+        "pep": 426,
+        "title": "Metadata for Python Software Packages 2.0",
+        "by": [
+          566
+        ],
+        "plain_top": 596,
+        "plain_top_is_replaced": false,
+        "plain_shows_replacement": true,
+        "lineage_flags_and_names_replacement": true
+      },
+      {
+        "pep": 431,
+        "title": "Time zone support improvements",
+        "by": [
+          615
+        ],
+        "plain_top": 431,
+        "plain_top_is_replaced": true,
+        "plain_shows_replacement": true,
+        "lineage_flags_and_names_replacement": true
+      },
+      {
+        "pep": 433,
+        "title": "Easier suppression of file descriptor inheritance",
+        "by": [
+          446
+        ],
+        "plain_top": 433,
+        "plain_top_is_replaced": true,
+        "plain_shows_replacement": true,
+        "lineage_flags_and_names_replacement": true
+      },
+      {
+        "pep": 438,
+        "title": "Transitioning to release-file hosting on PyPI",
+        "by": [
+          470
+        ],
+        "plain_top": 438,
+        "plain_top_is_replaced": true,
+        "plain_shows_replacement": true,
+        "lineage_flags_and_names_replacement": true
+      },
+      {
+        "pep": 486,
+        "title": "Make the Python Launcher aware of virtual environments",
+        "by": [
+          773
+        ],
+        "plain_top": 486,
+        "plain_top_is_replaced": true,
+        "plain_shows_replacement": true,
+        "lineage_flags_and_names_replacement": true
+      },
+      {
+        "pep": 501,
+        "title": "General purpose template literal strings",
+        "by": [
+          750
+        ],
+        "plain_top": 501,
+        "plain_top_is_replaced": true,
+        "plain_shows_replacement": true,
+        "lineage_flags_and_names_replacement": true
+      },
+      {
+        "pep": 509,
+        "title": "Add a private version to dict",
+        "by": [
+          699
+        ],
+        "plain_top": 509,
+        "plain_top_is_replaced": true,
+        "plain_shows_replacement": true,
+        "lineage_flags_and_names_replacement": true
+      },
+      {
+        "pep": 513,
+        "title": "A Platform Tag for Portable Linux Built Distributions",
+        "by": [
+          600
+        ],
+        "plain_top": 599,
+        "plain_top_is_replaced": false,
+        "plain_shows_replacement": true,
+        "lineage_flags_and_names_replacement": true
+      },
+      {
+        "pep": 543,
+        "title": "A Unified TLS API for Python",
+        "by": [
+          748
+        ],
+        "plain_top": 543,
+        "plain_top_is_replaced": true,
+        "plain_shows_replacement": true,
+        "lineage_flags_and_names_replacement": true
+      },
+      {
+        "pep": 554,
+        "title": "Multiple Interpreters in the Stdlib",
+        "by": [
+          734
+        ],
+        "plain_top": 554,
+        "plain_top_is_replaced": true,
+        "plain_shows_replacement": true,
+        "lineage_flags_and_names_replacement": true
+      },
+      {
+        "pep": 571,
+        "title": "The manylinux2010 Platform Tag",
+        "by": [
+          600
+        ],
+        "plain_top": 571,
+        "plain_top_is_replaced": true,
+        "plain_shows_replacement": true,
+        "lineage_flags_and_names_replacement": true
+      },
+      {
+        "pep": 599,
+        "title": "The manylinux2014 Platform Tag",
+        "by": [
+          600
+        ],
+        "plain_top": 599,
+        "plain_top_is_replaced": true,
+        "plain_shows_replacement": true,
+        "lineage_flags_and_names_replacement": true
+      },
+      {
+        "pep": 601,
+        "title": "Forbid return/break/continue breaking out of finally",
+        "by": [
+          765
+        ],
+        "plain_top": 601,
+        "plain_top_is_replaced": true,
+        "plain_shows_replacement": true,
+        "lineage_flags_and_names_replacement": true
+      },
+      {
+        "pep": 622,
+        "title": "Structural Pattern Matching",
+        "by": [
+          634
+        ],
+        "plain_top": 635,
+        "plain_top_is_replaced": false,
+        "plain_shows_replacement": true,
+        "lineage_flags_and_names_replacement": true
+      },
+      {
+        "pep": 631,
+        "title": "Dependency specification in pyproject.toml based on PEP 508",
+        "by": [
+          621
+        ],
+        "plain_top": 631,
+        "plain_top_is_replaced": true,
+        "plain_shows_replacement": true,
+        "lineage_flags_and_names_replacement": true
+      },
+      {
+        "pep": 665,
+        "title": "A file format to list Python dependencies for reproducibility of an application",
+        "by": [
+          751
+        ],
+        "plain_top": 665,
+        "plain_top_is_replaced": true,
+        "plain_shows_replacement": true,
+        "lineage_flags_and_names_replacement": true
+      },
+      {
+        "pep": 722,
+        "title": "Dependency specification for single-file scripts",
+        "by": [
+          723
+        ],
+        "plain_top": 722,
+        "plain_top_is_replaced": true,
+        "plain_shows_replacement": true,
+        "lineage_flags_and_names_replacement": true
+      },
+      {
+        "pep": 724,
+        "title": "Stricter Type Guards",
+        "by": [
+          742
+        ],
+        "plain_top": 724,
+        "plain_top_is_replaced": true,
+        "plain_shows_replacement": true,
+        "lineage_flags_and_names_replacement": true
+      },
+      {
+        "pep": 3124,
+        "title": "Overloading, Generic Functions, Interfaces, and Adaptation",
+        "by": [
+          443
+        ],
+        "plain_top": 3124,
+        "plain_top_is_replaced": true,
+        "plain_shows_replacement": true,
+        "lineage_flags_and_names_replacement": true
+      },
+      {
+        "pep": 3153,
+        "title": "Asynchronous IO support",
+        "by": [
+          3156
+        ],
+        "plain_top": 3156,
+        "plain_top_is_replaced": false,
+        "plain_shows_replacement": true,
+        "lineage_flags_and_names_replacement": true
+      }
+    ],
+    "n": 40,
+    "plain_top_is_replaced": 26,
+    "plain_shows_replacement": 40,
+    "plain_misleads": 0,
+    "plain_top_is_current": 14,
+    "lineage_flags": 40
+  }
+}

@@ -32,7 +32,9 @@ do not contain the answer, submit an answer saying so with no citations - never 
 
 Mark each claim in the text with footnote numbers that point into your citations list, 1-based, right after \
 the sentence's punctuation: "PEP 649 was accepted on 2023-05-08.[1] Gregory P. Smith announced it.[2]" means \
-citations[0] backs the first sentence and citations[1] the second. Every number must refer to a citation."""
+citations[0] backs the first sentence and citations[1] the second. Every number must refer to a citation. Cite the \
+proposal's own id (e.g. pep:688) on the sentence that names it, alongside the people and decisions you cite. Refer to \
+people by name, not by pronoun."""
 
 
 @dataclass

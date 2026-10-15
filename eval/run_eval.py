@@ -114,7 +114,7 @@ def render_markdown(res: dict, backend: str) -> str:
            f"- **Correct:** {s['correct']}/{s['n']} ({s['accuracy']:.0%})",
            f"- **Citation recall** (answerable questions): {s['citation_recall']:.0%}" if s["citation_recall"] is not None else "- **Citation recall:** n/a",
            f"- **Correct abstentions** on out-of-corpus questions: {s['abstention']}",
-           f"- **Median time per question:** {s['median_seconds']} s", ""]
+           f"- **Median time per question:** {round(s['median_seconds'], 1)} s", ""]
     rp = res["ripple"]
     out.append(f"- **Ripple recall:** {rp['recall']:.0%}, precision {rp['precision']:.0%} "
                f"({rp['found']} PEPs flagged, {rp['expected']} expected; missed {rp['missed'] or 'none'}, extra {rp['extra'] or 'none'})"

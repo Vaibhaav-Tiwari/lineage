@@ -5,10 +5,15 @@
   "citation_recall": 1.0,
   "missing": [],
   "abstained": false,
-  "seconds": 15.2,
-  "tools": 0,
+  "seconds": 15.6,
+  "tools": 1,
   "error": null,
-  "tool_ms": []
+  "tool_ms": [
+   [
+    "decision_path",
+    13.9
+   ]
+  ]
  },
  {
   "q": "Who announced that PEP 695, the type parameter syntax, was accepted?",
@@ -16,10 +21,15 @@
   "citation_recall": 1.0,
   "missing": [],
   "abstained": false,
-  "seconds": 11.4,
-  "tools": 0,
+  "seconds": 12.1,
+  "tools": 1,
   "error": null,
-  "tool_ms": []
+  "tool_ms": [
+   [
+    "decision_path",
+    17.0
+   ]
+  ]
  },
  {
   "q": "Who announced the decision on PEP 701?",
@@ -27,10 +37,15 @@
   "citation_recall": 1.0,
   "missing": [],
   "abstained": false,
-  "seconds": 14.1,
-  "tools": 0,
+  "seconds": 12.4,
+  "tools": 1,
   "error": null,
-  "tool_ms": []
+  "tool_ms": [
+   [
+    "decision_path",
+    10.8
+   ]
+  ]
  },
  {
   "q": "When was PEP 749 accepted, and who announced it?",
@@ -38,10 +53,15 @@
   "citation_recall": 1.0,
   "missing": [],
   "abstained": false,
-  "seconds": 12.1,
-  "tools": 0,
+  "seconds": 11.9,
+  "tools": 1,
   "error": null,
-  "tool_ms": []
+  "tool_ms": [
+   [
+    "decision_path",
+    10.3
+   ]
+  ]
  },
  {
   "q": "Who announced the acceptance of PEP 688?",
@@ -49,10 +69,15 @@
   "citation_recall": 1.0,
   "missing": [],
   "abstained": false,
-  "seconds": 11.7,
-  "tools": 0,
+  "seconds": 12.9,
+  "tools": 1,
   "error": null,
-  "tool_ms": []
+  "tool_ms": [
+   [
+    "decision_path",
+    13.3
+   ]
+  ]
  },
  {
   "q": "Who announced that PEP 692 was accepted?",
@@ -60,10 +85,15 @@
   "citation_recall": 1.0,
   "missing": [],
   "abstained": false,
-  "seconds": 8.6,
-  "tools": 0,
+  "seconds": 9.1,
+  "tools": 1,
   "error": null,
-  "tool_ms": []
+  "tool_ms": [
+   [
+    "decision_path",
+    11.0
+   ]
+  ]
  },
  {
   "q": "Who accepted PEP 740?",
@@ -71,10 +101,15 @@
   "citation_recall": 1.0,
   "missing": [],
   "abstained": false,
-  "seconds": 11.5,
-  "tools": 0,
+  "seconds": 12.2,
+  "tools": 1,
   "error": null,
-  "tool_ms": []
+  "tool_ms": [
+   [
+    "decision_path",
+    14.2
+   ]
+  ]
  },
  {
   "q": "Who wrote PEP 572, assignment expressions?",
@@ -82,10 +117,15 @@
   "citation_recall": 1.0,
   "missing": [],
   "abstained": false,
-  "seconds": 8.3,
-  "tools": 0,
+  "seconds": 12.2,
+  "tools": 1,
   "error": null,
-  "tool_ms": []
+  "tool_ms": [
+   [
+    "decision_path",
+    7.3
+   ]
+  ]
  },
  {
   "q": "Who are the authors of PEP 484, type hints?",
@@ -93,13 +133,13 @@
   "citation_recall": 1.0,
   "missing": [],
   "abstained": false,
-  "seconds": 11.2,
+  "seconds": 15.7,
   "tools": 1,
   "error": null,
   "tool_ms": [
    [
     "decision_path",
-    53.1
+    15.1
    ]
   ]
  },
@@ -109,13 +149,13 @@
   "citation_recall": 1.0,
   "missing": [],
   "abstained": false,
-  "seconds": 9.0,
+  "seconds": 10.9,
   "tools": 1,
   "error": null,
   "tool_ms": [
    [
     "decision_path",
-    28.3
+    12.5
    ]
   ]
  },
@@ -125,13 +165,13 @@
   "citation_recall": 1.0,
   "missing": [],
   "abstained": false,
-  "seconds": 10.6,
+  "seconds": 11.4,
   "tools": 1,
   "error": null,
   "tool_ms": [
    [
     "decision_path",
-    38.7
+    8.9
    ]
   ]
  },
@@ -141,13 +181,13 @@
   "citation_recall": 1.0,
   "missing": [],
   "abstained": false,
-  "seconds": 13.2,
+  "seconds": 10.3,
   "tools": 1,
   "error": null,
   "tool_ms": [
    [
     "decision_path",
-    85.0
+    10.3
    ]
   ]
  },
@@ -157,13 +197,13 @@
   "citation_recall": 1.0,
   "missing": [],
   "abstained": false,
-  "seconds": 12.0,
+  "seconds": 14.8,
   "tools": 1,
   "error": null,
   "tool_ms": [
    [
     "decision_path",
-    152.3
+    9.7
    ]
   ]
  },
@@ -173,13 +213,13 @@
   "citation_recall": 1.0,
   "missing": [],
   "abstained": false,
-  "seconds": 10.4,
+  "seconds": 9.4,
   "tools": 1,
   "error": null,
   "tool_ms": [
    [
     "decision_path",
-    68.2
+    8.7
    ]
   ]
  },
@@ -189,13 +229,13 @@
   "citation_recall": 1.0,
   "missing": [],
   "abstained": false,
-  "seconds": 20.1,
+  "seconds": 17.5,
   "tools": 1,
   "error": null,
   "tool_ms": [
    [
     "who_knows",
-    78.0
+    12.9
    ]
   ]
  },
@@ -205,13 +245,13 @@
   "citation_recall": 1.0,
   "missing": [],
   "abstained": false,
-  "seconds": 14.8,
+  "seconds": 17.6,
   "tools": 1,
   "error": null,
   "tool_ms": [
    [
     "who_knows",
-    22.7
+    7.1
    ]
   ]
  },
@@ -221,17 +261,17 @@
   "citation_recall": 1.0,
   "missing": [],
   "abstained": false,
-  "seconds": 14.3,
+  "seconds": 10.8,
   "tools": 2,
   "error": null,
   "tool_ms": [
    [
     "pep_timeline",
-    58.9
+    11.5
    ],
    [
     "decision_path",
-    27.1
+    8.9
    ]
   ]
  },
@@ -241,10 +281,15 @@
   "citation_recall": null,
   "missing": [],
   "abstained": true,
-  "seconds": 8.7,
-  "tools": 0,
+  "seconds": 14.7,
+  "tools": 1,
   "error": null,
-  "tool_ms": []
+  "tool_ms": [
+   [
+    "search",
+    48.2
+   ]
+  ]
  },
  {
   "q": "What is the population of Paris?",
@@ -252,7 +297,7 @@
   "citation_recall": null,
   "missing": [],
   "abstained": true,
-  "seconds": 10.1,
+  "seconds": 11.5,
   "tools": 0,
   "error": null,
   "tool_ms": []
@@ -263,13 +308,17 @@
   "citation_recall": null,
   "missing": [],
   "abstained": true,
-  "seconds": 32.4,
-  "tools": 1,
+  "seconds": 11.8,
+  "tools": 2,
   "error": null,
   "tool_ms": [
    [
     "search",
-    165.8
+    27.7
+   ],
+   [
+    "search",
+    27.8
    ]
   ]
  }
