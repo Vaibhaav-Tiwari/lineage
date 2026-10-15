@@ -15,10 +15,11 @@ const fmtDay = (iso: string) => { const [y, m, d] = iso.split("-").map(Number); 
 const pinLabel = (e: EventRow) => (e.kind === "supersede" ? `PEP ${e.pep.split(":")[1]} replaced` : e.summary.split(/[.(]/)[0]);
 
 export default function TimeRail({
-  events, ticks, asOf, onAsOf, onApply, onUndo, onReset, applying,
+  events, ticks, span, asOf, onAsOf, onApply, onUndo, onReset, applying,
 }: {
   events: EventRow[];
   ticks: Tick[];
+  span: { from: string; to: string } | null;
   asOf: string | null;
   onAsOf: (d: string | null) => void;
   onApply: (slug: string) => void;
@@ -70,6 +71,14 @@ export default function TimeRail({
         {asOf ? <>As of <strong className="typed">{asOf}</strong> <button onClick={() => onAsOf(null)}>Back to today</button></> : "As of today"}
       </div>
       <div className="rail-track" ref={track}>
+        {span && (() => {
+          const a = pct(new Date(span.from)), b = pct(new Date(span.to));
+          const years = span.from.slice(0, 4) === span.to.slice(0, 4) ? span.from.slice(0, 4) : `${span.from.slice(0, 4)} to ${span.to.slice(0, 4)}`;
+          return (
+            <span className="rail-span" style={{ left: `${a}%`, width: `max(6px, ${b - a}%)` }}
+                  title={`The evidence on the graph covers ${years}`} aria-label={`The evidence on the graph covers ${years}`} role="img" />
+          );
+        })()}
         <div className="rail-line" />
         {years.map((y) => (
           <span key={y} className={`rail-mark ${y % 5 === 0 ? "major" : ""}`} style={{ left: `${((y - START) / (END - START)) * 100}%` }}>

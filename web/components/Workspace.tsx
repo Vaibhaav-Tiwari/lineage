@@ -70,6 +70,13 @@ export default function Workspace() {
     const pep = n.id.split(":")[2];
     return { id: n.id, at: n.props.at, label: `PEP ${pep} ${n.props.kind === "accept" ? "accepted" : n.props.kind === "reject" ? "rejected" : n.props.kind}` };
   }), [fragment]);
+  // the years the evidence on the graph covers, drawn as a band on the time ruler
+  const span = useMemo(() => {
+    const days = fragment.nodes.flatMap((n) => [n.props?.at, n.props?.created])
+      .map((d) => (typeof d === "string" ? d.slice(0, 10) : ""))
+      .filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort();
+    return days.length ? { from: days[0], to: days[days.length - 1] } : null;
+  }, [fragment]);
   const [hintsOff, setHintsOff] = useState(false);
   useEffect(() => { try { setHintsOff(localStorage.getItem("lineage.hints") === "off"); } catch { /* private mode */ } }, []);
   const hideHints = () => { setHintsOff(true); try { localStorage.setItem("lineage.hints", "off"); } catch { /* ignore */ } };
@@ -220,7 +227,7 @@ export default function Workspace() {
           ))}
         </nav>
       </header>
-      <TimeRail events={events} ticks={ticks} asOf={asOf} onAsOf={setAsOf} onApply={apply} onUndo={undo} onReset={reset} applying={applying} />
+      <TimeRail events={events} ticks={ticks} span={span} asOf={asOf} onAsOf={setAsOf} onApply={apply} onUndo={undo} onReset={reset} applying={applying} />
 
       {view === "ask" && (
         <main className={`workspace ${showLeft ? "" : "no-left"} ${showRight ? "" : "no-right"}`}>
