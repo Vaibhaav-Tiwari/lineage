@@ -63,7 +63,7 @@ export default function Workspace() {
     setQuestion("");
     setBusy(true);
     try {
-      const context = entries.slice(-4).map((e) =>
+      const context: Record<string, string>[] = entries.slice(-4).map((e): Record<string, string> =>
         e.kind === "steward" ? { note: `Steward: ${e.text}` } : { q: e.q, a: e.result?.text ?? "" });
       const r = await api.ask(q, UID, asOf, context, selected);
       patchEntry(i, (e) => ({ ...e, result: r }));
