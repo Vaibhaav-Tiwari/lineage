@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { useDismiss } from "@/lib/useDismiss";
 import type { EventRow } from "@/lib/api";
 import Tip from "./Tip";
 
@@ -25,6 +26,8 @@ export default function TimeRail({
   const [open, setOpen] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
+  const pinBox = useRef<HTMLDivElement>(null);
+  useDismiss(pinBox, open !== null, useCallback(() => setOpen(null), []));
   const years = useMemo(() => Array.from({ length: (END - START) / 3 + 1 }, (_, i) => START + i * 3), []);
   const handle = asOf ? pct(new Date(asOf)) : 100;
 
@@ -80,7 +83,7 @@ export default function TimeRail({
           </span>
         ))}
         {events.map((e) => (
-          <div key={e.id} style={{ position: "absolute", left: `${pct(new Date(e.at))}%`, top: 0 }}>
+          <div key={e.id} ref={open === e.slug ? pinBox : undefined} style={{ position: "absolute", left: `${pct(new Date(e.at))}%`, top: 0 }}>
             <Tip side="bottom" text={e.applied ? "Applied. Click to undo it." : "A real change from Python's history. Click to replay it and see what goes stale."}>
               <button className={`rail-pin ${e.applied ? "applied" : ""}`} aria-label={`Change event: ${e.summary}`} onClick={() => setOpen(open === e.slug ? null : e.slug)}>
                 <span className="head" /><span className="stem" />

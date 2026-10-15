@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
+import { useDismiss } from "@/lib/useDismiss";
 
 const ROWS: [string, string, string][] = [
   ["key-pep", "Proposal (PEP)", "A Python Enhancement Proposal: the documents decisions are made about."],
@@ -14,8 +15,10 @@ const ROWS: [string, string, string][] = [
 
 export default function GraphKey() {
   const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  useDismiss(box, open, useCallback(() => setOpen(false), []));
   return (
-    <div className="graph-key">
+    <div className="graph-key" ref={box}>
       <button className="key-btn" aria-expanded={open} aria-controls="graph-key" onClick={() => setOpen(!open)} title="What the shapes mean">?</button>
       {open && (
         <div id="graph-key" className="key-panel" role="dialog" aria-label="Graph key">

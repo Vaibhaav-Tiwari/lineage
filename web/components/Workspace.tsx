@@ -141,6 +141,7 @@ export default function Workspace() {
   }
 
   async function apply(slug: string) {
+    setView("ask"); // the ripple is drawn on the Ask graph, wherever the pin was clicked
     setApplying(true);
     try {
       setBeforeApply(fragment);
@@ -167,6 +168,7 @@ export default function Workspace() {
   }
 
   async function undo(slug: string) {
+    setView("ask");
     setApplying(true);
     try {
       await api.rewind(slug);
