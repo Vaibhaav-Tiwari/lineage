@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { Courier_Prime, Libre_Caslon_Display, Libre_Caslon_Text } from "next/font/google";
+import { Courier_Prime } from "next/font/google";
 import "./globals.css";
 
-const display = Libre_Caslon_Display({ subsets: ["latin"], weight: "400", variable: "--font-display" });
-const text = Libre_Caslon_Text({ subsets: ["latin"], weight: ["400", "700"], style: ["normal", "italic"], variable: "--font-text" });
+// Libre Caslon Condensed is newer than next/font's catalogue, so it loads from Google Fonts directly.
+const CASLON = "https://fonts.googleapis.com/css2?family=Libre+Caslon+Condensed:ital,wght@0,400..700;1,400..700&display=swap";
 const typed = Courier_Prime({ subsets: ["latin"], weight: ["400", "700"], variable: "--font-typed" });
 
 export const metadata: Metadata = {
@@ -13,7 +13,12 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${display.variable} ${text.variable} ${typed.variable}`}>
+    <html lang="en" className={typed.variable}>
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link rel="stylesheet" href={CASLON} />
+      </head>
       <body>{children}</body>
     </html>
   );

@@ -13,8 +13,8 @@
   --bleach: #c9cfd6;
   --stamp: #c2273d;
   --stamp-wash: #f6dde1;
-  --display: var(--font-display), "Libre Caslon Display", Georgia, serif;
-  --text: var(--font-text), "Libre Caslon Text", Georgia, serif;
+  --display: "Libre Caslon Condensed", Georgia, serif;
+  --text: "Libre Caslon Condensed", Georgia, serif;
   --typed: var(--font-typed), "Courier Prime", "Courier New", monospace;
   --step--1: 0.8125rem;
   --step-0: 0.9375rem;
