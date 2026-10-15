@@ -40,6 +40,7 @@ export default function WhatIf({ onResult }: { onResult: (w: any | null) => void
 
   return (
     <section className="whatif-panel" aria-label="What if">
+      <div className="whatif-controls">
       <div className="whatif-modes" role="tablist">
         <span>What if</span>
         {([["person", "a person left"], ["group", "a group left"], ["proposal", "a proposal were reversed"]] as const).map(([m, label]) => (
@@ -73,7 +74,17 @@ export default function WhatIf({ onResult }: { onResult: (w: any | null) => void
                onPick={(p: any) => runPreview(p)} />
       )}
 
-      {busy && <p className="working">{busy}</p>}
+      </div>
+
+      <div className="whatif-result" aria-live="polite">
+      {!result && !preview && !busy && (
+        <div className="whatif-empty">
+          <h3>Ask what would break</h3>
+          <p>Pick a person, a group of people, or a proposal. Lineage copies the whole graph, applies your &ldquo;what if&rdquo; to the copy, and tells you in plain words what would be left without an owner and who could step in.</p>
+          <p>The real graph is never touched.</p>
+        </div>
+      )}
+      {busy && <div className="whatif-empty"><p className="working">{busy}</p></div>}
 
       {result && (
         <div className="verdict">
@@ -106,6 +117,7 @@ export default function WhatIf({ onResult }: { onResult: (w: any | null) => void
           <p className="how">A dry run of the Steward: read-only queries walk the citation graph and every agent&rsquo;s DERIVED_FROM chains. To really apply a change, use a red pin on the timeline.</p>
         </div>
       )}
+      </div>
     </section>
   );
 }
