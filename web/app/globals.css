@@ -235,3 +235,69 @@ a { color: var(--cyan); }
 @media (prefers-reduced-motion: reduce) {
   .stamp.supersede { animation: none; }
 }
+
+/* ---------- tooltips ---------- */
+.tip-wrap { position: relative; display: inline-flex; }
+.tip {
+  position: absolute; left: 50%; transform: translateX(-50%); z-index: 20; width: max-content; max-width: 260px;
+  background: var(--ink); color: var(--paper); font-size: var(--step--1); line-height: 1.4; padding: 0.4rem 0.6rem;
+  border-radius: 2px; pointer-events: none; font-style: normal; text-decoration: none; text-align: left;
+}
+.tip-top { bottom: calc(100% + 8px); }
+.tip-bottom { top: calc(100% + 8px); }
+.node-tip {
+  position: absolute; z-index: 6; max-width: 280px; background: var(--card); border: 1px solid var(--ink);
+  padding: 0.45rem 0.6rem; font-size: var(--step--1); line-height: 1.4; pointer-events: none; box-shadow: 0 6px 18px rgba(24, 35, 58, 0.14);
+}
+.node-tip strong { display: block; font-family: var(--display); font-weight: 400; font-size: var(--step-0); }
+.node-tip .stale-why { color: var(--stamp); margin-top: 0.2rem; }
+
+/* ---------- graph key ---------- */
+.graph-key { position: absolute; right: 1rem; bottom: 0.8rem; z-index: 5; }
+.key-btn {
+  width: 30px; height: 30px; border-radius: 50%; border: 1.5px solid var(--ink); background: var(--card); cursor: pointer;
+  font-family: var(--display); font-size: var(--step-1); line-height: 1;
+}
+.key-panel {
+  position: absolute; right: 0; bottom: 40px; width: 330px; background: var(--card); border: 1px solid var(--rule);
+  padding: 0.9rem 1rem; box-shadow: 0 8px 28px rgba(24, 35, 58, 0.16);
+}
+.key-panel h4 { font-family: var(--display); font-weight: 400; font-size: var(--step-1); margin: 0 0 0.5rem; }
+.key-panel ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.45rem; font-size: var(--step--1); }
+.key-panel li { display: flex; gap: 0.6rem; align-items: flex-start; }
+.key-panel li i { flex: none; width: 18px; height: 14px; margin-top: 3px; border: 1.5px solid var(--ink); background: var(--card); }
+.key-panel p { margin: 0.7rem 0 0; font-size: var(--step--1); color: var(--ink-faint); font-style: italic; }
+.key-person { border-radius: 50% !important; border-color: var(--cyan) !important; background: var(--cyan-wash) !important; width: 14px !important; }
+.key-decision { transform: rotate(45deg) scale(0.75); border-color: var(--pine) !important; background: var(--pine-wash) !important; width: 14px !important; }
+.key-answer { border: 3px double var(--pine) !important; background: var(--pine-wash) !important; }
+.key-action { width: 0 !important; height: 0 !important; border-left: 9px solid transparent !important; border-right: 9px solid transparent !important; border-bottom: 14px solid var(--ink) !important; border-top: 0 !important; background: none !important; }
+.key-small { width: 12px !important; border-style: dashed !important; border-color: var(--ink-faint) !important; }
+.key-stale { background: var(--hatch), var(--bleach) !important; border-style: dashed !important; border-color: var(--ink-faint) !important; }
+.key-red-line { height: 0 !important; border: 0 !important; border-top: 2.5px solid var(--stamp) !important; margin-top: 9px !important; }
+
+/* ---------- next-step hints ---------- */
+.hint {
+  font-size: var(--step--1); color: var(--cyan); background: var(--cyan-wash); padding: 0.5rem 0.7rem; display: flex; gap: 0.6rem;
+  align-items: flex-start; border-left: 2px solid var(--cyan);
+}
+.hint span { flex: 1; }
+.hint button { background: none; border: 0; color: var(--ink-faint); cursor: pointer; padding: 0; font-size: var(--step--1); text-decoration: underline; }
+
+/* ---------- undo bar & confirms ---------- */
+.undo-bar {
+  display: flex; gap: 0.8rem; align-items: center; background: var(--ink); color: var(--paper); padding: 0.5rem 0.8rem;
+  font-size: var(--step--1); margin-bottom: 0.7rem;
+}
+.undo-bar button { background: none; border: 1px solid var(--paper); color: var(--paper); cursor: pointer; padding: 0.15rem 0.6rem; }
+.undo-bar .count { margin-left: auto; opacity: 0.7; }
+.confirm { display: inline-flex; gap: 0.6rem; align-items: baseline; }
+.confirm .danger { color: var(--stamp); }
+
+/* ---------- time rail clarity ---------- */
+.rail-today { position: absolute; top: 46px; transform: translateX(-50%); font-size: var(--step--1); color: var(--ink); font-style: italic; white-space: nowrap; }
+.rail-bubble {
+  position: absolute; top: -6px; transform: translateX(-50%); background: var(--ink); color: var(--paper); font-family: var(--typed);
+  font-size: 0.75rem; padding: 0.05rem 0.4rem; white-space: nowrap; pointer-events: none;
+}
+.rail-tick.decision { width: 3px; height: 20px; top: 21px; cursor: help; }
+.rail-tick-hit { position: absolute; top: 16px; width: 12px; height: 30px; transform: translateX(-5px); }

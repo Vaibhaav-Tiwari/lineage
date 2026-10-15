@@ -5,6 +5,8 @@ import dynamic from "next/dynamic";
 import { api, AskResult, EventRow, Fragment, GNode, mergeFragments, StewardReport } from "@/lib/api";
 import TimeRail from "./TimeRail";
 import IndexCard from "./IndexCard";
+import GraphKey from "./GraphKey";
+import Tip from "./Tip";
 import OrgView from "./OrgView";
 import MemoryView from "./MemoryView";
 import type { Wave } from "./EvidenceGraph";
@@ -40,6 +42,7 @@ export default function Workspace() {
   const [asOf, setAsOf] = useState<string | null>(null);
   const [applying, setApplying] = useState(false);
   const [cardVersion, setCardVersion] = useState(0);
+  const [beforeApply, setBeforeApply] = useState<Fragment | null>(null);
   const [graphs, setGraphs] = useState<{ graph: string; mb: number }[]>([]);
   const [online, setOnline] = useState(true);
   const [lastMs, setLastMs] = useState<number | null>(null);
@@ -50,7 +53,25 @@ export default function Workspace() {
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
 
-  const ticks = useMemo(() => fragment.nodes.filter((n) => n.label === "Decision" && n.props?.at).map((n) => ({ id: n.id, at: n.props.at })), [fragment]);
+  const ticks = useMemo(() => fragment.nodes.filter((n) => n.label === "Decision" && n.props?.at).map((n) => {
+    const pep = n.id.split(":")[2];
+    return { id: n.id, at: n.props.at, label: `PEP ${pep} ${n.props.kind === "accept" ? "accepted" : n.props.kind === "reject" ? "rejected" : n.props.kind}` };
+  }), [fragment]);
+  const [hintsOff, setHintsOff] = useState(false);
+  useEffect(() => { try { setHintsOff(localStorage.getItem("lineage.hints") === "off"); } catch { /* private mode */ } }, []);
+  const hideHints = () => { setHintsOff(true); try { localStorage.setItem("lineage.hints", "off"); } catch { /* ignore */ } };
+  const hint = useMemo(() => {
+    if (hintsOff) return null;
+    const qas = entries.filter((e): e is Entry & { kind: "qa" } => e.kind === "qa" && !!e.result && !e.result.abstained);
+    const applied = events.some((e) => e.applied);
+    const queued = qas.some((e) => e.actions.length > 0);
+    const blocked = qas.some((e) => e.actions.some((a) => a.status === "blocked" && a.reason?.startsWith("blocked:")));
+    if (!qas.length) return null;
+    if (!queued && !applied) return "Next: queue this answer for the onboarding FAQ, then open the red pin on the timeline to replay a real change.";
+    if (queued && !applied) return "Now open the red pin on the timeline and apply the change. Watch what goes stale.";
+    if (applied && queued && !blocked) return "Press Run on the queued action. The Steward will refuse it and show you the chain of evidence that changed.";
+    return "Try a follow-up question, drag the timeline dial back to 2020 and ask again, or open Organisation to see what happens if someone leaves.";
+  }, [entries, events, hintsOff]);
 
   function patchEntry(i: number, fn: (e: Entry & { kind: "qa" }) => Entry) {
     setEntries((xs) => xs.map((e, j) => (j === i && e.kind === "qa" ? fn(e) : e)));
@@ -111,6 +132,7 @@ export default function Workspace() {
   async function apply(slug: string) {
     setApplying(true);
     try {
+      setBeforeApply(fragment);
       const rep: StewardReport = await api.apply(slug);
       const h = rep.agents.historian ?? { beliefs: [], answers: [], actions_blocked: [] };
       const staleIds = [...rep.ripple.hard, ...rep.ripple.soft, ...rep.ripple.chunks, ...h.answers, ...h.actions_blocked];
@@ -126,6 +148,23 @@ export default function Workspace() {
         { kind: "steward", text: `${rep.summary} I re-checked everything built on ${rep.changed.join(", ")}: ${n(h.answers.length, "answer")} and ${n(h.beliefs.length, "belief")} no longer hold, ${n(h.actions_blocked.length, "queued action")} on hold, and ${n(rep.fixtasks.length, "proposal")} that cite it now have a review task.` },
       ]);
       setSelected(rep.changed[0]);
+      setCardVersion((v) => v + 1);
+    } finally {
+      setApplying(false);
+      refresh();
+    }
+  }
+
+  async function undo(slug: string) {
+    setApplying(true);
+    try {
+      await api.rewind(slug);
+      setStale(new Set()); setWave(null); setPath([]);
+      if (beforeApply) setFragment(beforeApply);
+      setEntries((xs) => [
+        ...xs.map((e) => e.kind === "qa" ? { ...e, stale: undefined, actions: e.actions.map((a) => (a.status === "blocked" ? { ...a, status: "pending" as const, reason: undefined } : a)) } : e),
+        { kind: "steward", text: "Change undone. The proposal, the agent's beliefs and answers, the queued action and the review tasks are back to how they were." },
+      ]);
       setCardVersion((v) => v + 1);
     } finally {
       setApplying(false);
@@ -150,7 +189,7 @@ export default function Workspace() {
           ))}
         </nav>
       </header>
-      <TimeRail events={events} ticks={ticks} asOf={asOf} onAsOf={setAsOf} onApply={apply} onReset={reset} applying={applying} />
+      <TimeRail events={events} ticks={ticks} asOf={asOf} onAsOf={setAsOf} onApply={apply} onUndo={undo} onReset={reset} applying={applying} />
 
       {view === "ask" && (
         <main className="workspace">
@@ -179,7 +218,9 @@ export default function Workspace() {
                       {e.stale && <p className="a-note">No longer current: {e.stale}</p>}
                       <div className="chips">
                         {e.result.citations.map((c) => (
-                          <button key={c} className={`chip ${stale.has(c) ? "stale" : ""}`} aria-pressed={selected === c} onClick={() => setSelected(c)}>{c}</button>
+                          <Tip key={c} text={stale.has(c) ? "No longer current. Click to see it in the graph." : "Evidence for this answer. Click to show it in the graph and open its card."}>
+                            <button className={`chip ${stale.has(c) ? "stale" : ""}`} aria-pressed={selected === c} onClick={() => setSelected(c)}>{c}</button>
+                          </Tip>
                         ))}
                       </div>
                       {e.result.tool_trace.length > 0 && (
@@ -204,6 +245,7 @@ export default function Workspace() {
                   )}
                 </div>
               ))}
+              {hint && <p className="hint"><span>{hint}</span><button onClick={hideHints}>Hide tips</button></p>}
             </div>
             <div className="asker">
               <form onSubmit={(ev) => { ev.preventDefault(); ask(question); }}>
@@ -220,6 +262,7 @@ export default function Workspace() {
 
           <section className="canvas" aria-label="Evidence">
             <EvidenceGraph fragment={fragment} cited={cited} stale={stale} wave={wave} path={path} onSelect={setSelected} />
+            {fragment.nodes.length > 0 && <GraphKey />}
             {fragment.nodes.length === 0 && <div className="canvas-empty">The evidence behind each answer is drawn here.</div>}
             {fragment.nodes.length > 0 && (
               <div className="legend"><span><i className="lg-cited" />cited in an answer</span><span><i className="lg-stale" />no longer current</span></div>
@@ -236,7 +279,9 @@ export default function Workspace() {
 
       <footer className="strip">
         <span><span className={`dot ${online ? "" : "off"}`} />{online ? "Historian and Steward online" : "API offline — start it with uvicorn"}</span>
-        <span>{graphs.length} graphs in FalkorDB, {graphs.reduce((s, g) => s + g.mb, 0).toFixed(0)} MB</span>
+        <Tip text="The company archive, each agent's memory, each visitor's memory and the shared task board are separate graphs. FalkorDB itself enforces who may write which.">
+          <span tabIndex={0}>{graphs.length} graphs in FalkorDB, {graphs.reduce((s, g) => s + g.mb, 0).toFixed(0)} MB</span>
+        </Tip>
         {lastMs !== null && <span>Last answer walked the graph in {Math.round(lastMs)} ms</span>}
         <span style={{ marginLeft: "auto" }}>Data: the public Python project (PEPs, discuss.python.org, CPython)</span>
       </footer>

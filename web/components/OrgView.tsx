@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import Tip from "./Tip";
 
 export default function OrgView() {
   const [areas, setAreas] = useState<any[]>([]);
@@ -89,8 +90,9 @@ export default function OrgView() {
               </div>
               <div className="people">
                 {everyone.map((p: any) => (
-                  <span key={p} title={listed.has(p) ? (committing.has(p) ? "listed and committing" : "listed, no recent commits") : "committing, not listed"}
-                        className={`person ${listed.has(p) ? "listed" : ""} ${committing.has(p) ? "revealed" : ""} ${listed.has(p) && !committing.has(p) ? "quiet" : ""}`}>{p}</span>
+                  <Tip key={p} text={listed.has(p) ? (committing.has(p) ? "Listed as an owner and committing in the last 12 months." : "Listed as an owner, but no commits in the last 12 months.") : "Committing regularly, but not listed as an owner."}>
+                    <span tabIndex={0} className={`person ${listed.has(p) ? "listed" : ""} ${committing.has(p) ? "revealed" : ""} ${listed.has(p) && !committing.has(p) ? "quiet" : ""}`}>{p}</span>
+                  </Tip>
                 ))}
               </div>
             </section>

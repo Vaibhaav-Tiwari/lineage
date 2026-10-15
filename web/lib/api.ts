@@ -41,6 +41,7 @@ export const api = {
   events: () => call<EventRow[]>("/events"),
   apply: (slug: string) => call<StewardReport>(`/events/${slug}/apply`, { method: "POST" }),
   reset: () => call<any>("/demo/reset", { method: "POST" }),
+  rewind: (slug: string) => call<any>(`/events/${slug}/rewind`, { method: "POST" }),
   propose: (kind: string, payload: any, derived_from: string[]) =>
     call<{ id: string }>("/actions", { method: "POST", body: JSON.stringify({ kind, payload, derived_from }) }),
   execute: (id: string) => call<any>(`/actions/${id}/execute`, { method: "POST" }),
@@ -64,6 +65,23 @@ export function mergeFragments(a: Fragment, b: Fragment): Fragment {
   const edges = new Map(a.edges.map((e) => [key(e), e]));
   for (const e of b.edges) edges.set(key(e), e);
   return { nodes: [...nodes.values()], edges: [...edges.values()] };
+}
+
+export function nodeDetail(n: GNode): string {
+  const p = n.props ?? {};
+  switch (n.label) {
+    case "PEP": return `Proposal${p.title ? `: ${p.title}` : ""}${p.status ? `. Status ${p.status}` : ""}${p.created ? `, created ${p.created}` : ""}.`;
+    case "Person": return `Person${p.github ? ` (GitHub ${p.github})` : ""}.`;
+    case "Decision": return `Decision: ${p.kind ?? "?"}${p.at ? ` on ${p.at}` : ""}.`;
+    case "Thread": return `Discussion thread${p.title ? `: ${p.title}` : ""}.`;
+    case "Post": return `Forum post${p.post_number ? ` #${p.post_number}` : ""}${p.created ? ` from ${p.created}` : ""}.`;
+    case "PR": return `Pull request${p.title ? `: ${p.title}` : ""}.`;
+    case "Chunk": return `Passage${p.heading ? ` from section "${p.heading}"` : ""}.`;
+    case "Answer": return `The Historian's answer: ${String(p.text ?? "").slice(0, 140)}…`;
+    case "Action": return "Queued action: add the answer to the onboarding FAQ. It can only run while its evidence is current.";
+    case "Area": return `Part of Python: ${p.name ?? n.id}.`;
+    default: return n.id;
+  }
 }
 
 export function nodeTitle(n: GNode): string {

@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Core } from "cytoscape";
-import { Fragment, nodeTitle } from "@/lib/api";
+import { Fragment, nodeDetail, nodeTitle } from "@/lib/api";
 
 export type Wave = { origin: string[]; stale: string[]; key: number } | null;
 
@@ -65,6 +65,7 @@ export default function EvidenceGraph({
   const host = useRef<HTMLDivElement>(null);
   const cyRef = useRef<Core | null>(null);
   const timers = useRef<number[]>([]);
+  const [tip, setTip] = useState<{ x: number; y: number; title: string; detail: string; stale: boolean } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -78,6 +79,12 @@ export default function EvidenceGraph({
       const typed = `${css.getPropertyValue("--font-typed").trim() || "Courier New"}, monospace`;
       const cy = cytoscape({ container: host.current, style: stylesheet(font, typed), wheelSensitivity: 0.25, minZoom: 0.2, maxZoom: 3 });
       cy.on("tap", "node", (e) => onSelect(e.target.id()));
+      cy.on("mouseover", "node", (e) => {
+        const n = e.target, pos = n.renderedPosition();
+        setTip({ x: pos.x, y: pos.y, title: n.data("title"), detail: n.data("detail"), stale: n.hasClass("stale") });
+      });
+      cy.on("mouseout", "node", () => setTip(null));
+      cy.on("pan zoom tap", () => setTip(null));
       cy.on("mouseover", "edge", (e) => e.target.addClass("labelled"));
       cy.on("mouseout", "edge", (e) => e.target.removeClass("labelled"));
       cyRef.current = cy;
@@ -96,7 +103,7 @@ export default function EvidenceGraph({
       c.elements().filter((el) => el.isNode() && !ids.has(el.id())).remove();
       const added: any[] = [];
       for (const n of fragment.nodes) {
-        const data = { id: n.id, label: n.label, title: nodeTitle(n), kind: n.props?.kind ?? "" };
+        const data = { id: n.id, label: n.label, title: nodeTitle(n), detail: nodeDetail(n), kind: n.props?.kind ?? "" };
         const el = c.getElementById(n.id);
         if (el.nonempty()) el.data(data);
         else added.push({ group: "nodes", data });
@@ -169,5 +176,16 @@ export default function EvidenceGraph({
     });
   }, [path, fragment]);
 
-  return <div ref={host} className="cy" role="img" aria-label="Evidence graph" />;
+  return (
+    <>
+      <div ref={host} className="cy" role="img" aria-label="Evidence graph" />
+      {tip && (
+        <div className="node-tip" style={{ left: tip.x + 16, top: tip.y + 12 }}>
+          <strong>{tip.title}</strong>
+          {tip.detail}
+          {tip.stale && <div className="stale-why">No longer current: the truth it rests on has changed.</div>}
+        </div>
+      )}
+    </>
+  );
 }
