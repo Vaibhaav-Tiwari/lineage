@@ -6,6 +6,8 @@ import { Fragment, GNode, nodeDetail, nodeTitle } from "@/lib/api";
 import { answerSlip, CARD, decisionStamp, Fonts, proposalCard, SLIP, STAMP } from "@/lib/cards";
 
 export type Wave = { origin: string[]; stale: string[]; key: number } | null;
+/** "Replay how this answer was found": each tool step lights up what it reached, then the answer and its sources. */
+export type Replay = { key: number; steps: { label: string; ids: string[] }[]; finish: string[]; finishLabel: string } | null;
 
 const HATCH =
   "data:image/svg+xml;utf8," +
@@ -40,7 +42,7 @@ function stylesheet(font: string, typed: string): any[] {
     { selector: "edge[type = 'DERIVED_FROM']", style: { "line-style": "dotted", "line-color": "#2e7d5b", "target-arrow-color": "#2e7d5b" } },
     { selector: "edge", style: {
         width: 1, "line-color": "#9aa3b2", "curve-style": "bezier", "target-arrow-shape": "triangle", "target-arrow-color": "#9aa3b2",
-        "arrow-scale": 0.7, "transition-property": "line-color, width", "transition-duration": 500 } },
+        "arrow-scale": 0.7, "transition-property": "line-color, width, opacity", "transition-duration": 500 } },
     { selector: "edge[type = 'MORE']", style: { "line-style": "dashed", "target-arrow-shape": "none" } },
     { selector: "edge[type = 'SUPERSEDES']", style: {
         width: 2.2, "line-color": "#c2273d", "target-arrow-color": "#c2273d", label: "replaces", "font-family": font, "font-style": "italic",
@@ -77,6 +79,10 @@ function stylesheet(font: string, typed: string): any[] {
     { selector: "node[label = 'Decision'].stale", style: { "background-image": "data(art)", "background-opacity": 0, "border-width": 0, opacity: 0.45 } },
     { selector: "node[label = 'Answer'].stale", style: { "background-image": "data(artStale)", "background-opacity": 0, "border-width": 0 } },
     { selector: "node[label = 'Decision'].cited, node[label = 'Answer'].cited", style: { "border-width": 0 } },
+    // ---- replay ----
+    { selector: "node.dim", style: { opacity: 0.12 } },
+    { selector: "edge.dim", style: { opacity: 0.06 } },
+    { selector: "node.lit", style: { opacity: 1, "overlay-color": "#9a7631", "overlay-opacity": 0.22, "overlay-padding": 9, "overlay-shape": "round-rectangle" } },
     // ---- what-if previews: nothing is changed, so these are marked as "would", never as stale ----
     { selector: "node[would = 'reverse']", style: { "border-color": "#c2273d", "border-style": "dashed", "border-width": 2.5 } },
     { selector: "node[would = 'review'][label = 'PEP'], node[would = 'review'][label = 'Answer']", style: {
@@ -110,7 +116,7 @@ function art(n: GNode, f: Fonts | null): Record<string, string> {
 }
 
 export default function EvidenceGraph({
-  fragment, cited, stale, wave, path, onSelect, fitSignal = 0,
+  fragment, cited, stale, wave, path, onSelect, fitSignal = 0, replay = null, onReplayEnd,
 }: {
   fragment: Fragment;
   cited: Set<string>;
@@ -119,12 +125,16 @@ export default function EvidenceGraph({
   path: string[];
   onSelect: (id: string) => void;
   fitSignal?: number;
+  replay?: Replay;
+  onReplayEnd?: () => void;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const cyRef = useRef<Core | null>(null);
   const timers = useRef<number[]>([]);
   const fonts = useRef<Fonts | null>(null);
   const [ready, setReady] = useState(false);
+  const [caption, setCaption] = useState<{ n: number; of: number; text: string } | null>(null);
+  const replayTimers = useRef<number[]>([]);
   const [tip, setTip] = useState<{ x: number; y: number; title: string; detail: string; stale: boolean } | null>(null);
 
   useEffect(() => {
@@ -257,9 +267,45 @@ export default function EvidenceGraph({
     });
   }, [path, fragment]);
 
+  // replay: fade everything, then light each step's findings in turn, then the answer and its sources
+  useEffect(() => {
+    const c = cyRef.current;
+    replayTimers.current.forEach(clearTimeout); replayTimers.current = [];
+    if (!c || !replay) { c?.elements().removeClass("dim lit"); setCaption(null); return; }
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const gap = reduce ? 2200 : 1700;
+    const frames = [...replay.steps, { label: replay.finishLabel, ids: replay.finish }];
+    const at = (ms: number, fn: () => void) => replayTimers.current.push(window.setTimeout(fn, ms));
+    at(250, () => { c.elements().addClass("dim").removeClass("lit"); });
+    frames.forEach((f, i) => at(500 + i * gap, () => {
+      const hit = c.nodes().filter((n) => f.ids.includes(n.id()));
+      c.nodes(".lit").removeClass("lit");
+      hit.removeClass("dim").addClass("lit");
+      hit.edgesWith(c.nodes().not(".dim")).removeClass("dim");
+      setCaption({ n: i + 1, of: frames.length, text: f.label });
+    }));
+    at(500 + frames.length * gap + 600, () => {
+      c.elements().removeClass("dim lit"); setCaption(null); onReplayEnd?.();
+    });
+    return () => { replayTimers.current.forEach(clearTimeout); replayTimers.current = []; c.elements().removeClass("dim lit"); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [replay?.key]);
+
+  function stopReplay() {
+    replayTimers.current.forEach(clearTimeout); replayTimers.current = [];
+    cyRef.current?.elements().removeClass("dim lit"); setCaption(null); onReplayEnd?.();
+  }
+
   return (
     <>
       <div ref={host} className="cy" role="img" aria-label="Evidence graph" />
+      {caption && (
+        <div className="replay-caption" role="status" aria-live="polite">
+          <span className="step typed">{caption.n === caption.of ? "Answer" : `Step ${caption.n} of ${caption.of - 1}`}</span>
+          <span>{caption.text}</span>
+          <button className="linkish" onClick={stopReplay}>Stop</button>
+        </div>
+      )}
       {tip && (
         <div className="node-tip" style={{ left: tip.x + 16, top: tip.y + 12 }}>
           <strong>{tip.title}</strong>

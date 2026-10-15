@@ -98,14 +98,17 @@ class ToolSession:
             return "Tool budget used up. Call submit_answer now.", True
         self.used += 1
         t0 = time.perf_counter()
+        found, summary = [], ""
         try:
             frag = await _run_tool(name, inp, self.company_g, self.embedder, self.as_of)
             self.union = self.union.merge(frag)
             content, err = json.dumps(frag.meta, default=str)[:12000], None
+            found = [n["id"] for n in frag.nodes][:80]  # what this step reached, for "replay how this was found"
+            summary = str(frag.meta.get("summary") or "").split("\n")[0][:160]
         except Exception as e:  # reported to the model, never crashes the request
             content, err = f"Error: {e}", str(e)
         self.trace.append({"name": name, "input": inp, "ms": round((time.perf_counter() - t0) * 1000, 1),
-                           **({"error": err} if err else {})})
+                           "found": found, "summary": summary, **({"error": err} if err else {})})
         return content, err is not None
 
 

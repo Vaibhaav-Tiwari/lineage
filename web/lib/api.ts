@@ -11,7 +11,7 @@ export type AskResult = {
   citations: string[];
   evidence: Fragment;
   beliefs: { text: string; evidence: string[]; confidence: number }[];
-  tool_trace: { name: string; input: any; ms: number; error?: string }[];
+  tool_trace: { name: string; input: any; ms: number; error?: string; found?: string[]; summary?: string }[];
   usage: Record<string, any>;
   miss?: Miss | null;
 };

@@ -118,3 +118,15 @@ def test_historian_prompt_asks_for_footnote_markers():
     from lineage.agents.historian import SYSTEM
 
     assert "[1]" in SYSTEM
+
+
+async def test_each_tool_step_records_what_it_found_for_the_replay(db):
+    cg, ag, ug = await _graphs(db)
+    try:
+        r = await ask("Who announced the acceptance of PEP 102?", company_g=cg, agent_g=ag, user_g=None,
+                      llm=GraphOnlyLLM(), embedder=FakeEmbedder())
+        step = r.tool_trace[0]
+        assert step["name"] == "decision_path" and "pep:102" in step["found"] and "person:bob" in step["found"]
+        assert isinstance(step["summary"], str) and step["summary"]
+    finally:
+        await _cleanup(cg, ag, ug)

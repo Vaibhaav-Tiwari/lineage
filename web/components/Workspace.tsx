@@ -10,11 +10,24 @@ import GraphKey from "./GraphKey";
 import Tip from "./Tip";
 import OrgView from "./OrgView";
 import MemoryView from "./MemoryView";
-import type { Wave } from "./EvidenceGraph";
+import type { Replay, Wave } from "./EvidenceGraph";
 
 const EvidenceGraph = dynamic(() => import("./EvidenceGraph"), { ssr: false });
 const UID = "visitor";
 const EMPTY: Fragment = { nodes: [], edges: [] };
+
+function stepLabel(t: { name: string; input: any }): string {
+  const i = t.input ?? {};
+  switch (t.name) {
+    case "search": return `Searched the archive for “${i.query}”`;
+    case "decision_path": return `Followed how PEP ${i.pep} was decided`;
+    case "pep_timeline": return `Read the timeline of PEP ${i.pep}`;
+    case "who_knows": return `Looked up who knows ${i.topic}`;
+    case "related_peps": return `Found proposals related to PEP ${i.pep}`;
+    case "connection": return `Traced how ${i.a} connects to ${i.b}`;
+    default: return t.name.replace(/_/g, " ");
+  }
+}
 const n = (k: number, word: string) => `${k} ${word}${k === 1 ? "" : "s"}`;
 
 type ActionItem = { id: string; status: "pending" | "done" | "blocked"; reason?: string };
@@ -49,6 +62,7 @@ export default function Workspace() {
   const [showRight, setShowRight] = useState(true);
   const [fitSignal, setFitSignal] = useState(0);
   const [previewNote, setPreviewNote] = useState<string | null>(null);
+  const [replay, setReplay] = useState<Replay>(null);
   const [beforePreview, setBeforePreview] = useState<Fragment>(EMPTY);
   const focus = !showLeft && !showRight;
   const setPanels = (l: boolean, r: boolean) => { setShowLeft(l); setShowRight(r); setFitSignal((n) => n + 1); };
@@ -160,6 +174,22 @@ export default function Workspace() {
       const culprit = chain[chain.length - 1];
       if (culprit) setSelected(culprit);
     }
+  }
+
+  /** Replay how an answer was found: each tool step lights up what it reached, then the answer and its sources. */
+  function replayAnswer(e: Entry & { kind: "qa" }) {
+    const r = e.result!;
+    const onCanvas = fragment.nodes.some((n) => n.id === r.answer_id);
+    const graph = onCanvas && !previewNote ? fragment : e.frag ?? fragment;
+    if (!onCanvas || previewNote) { setPreviewNote(null); setBeforePreview(EMPTY); setFragment(graph); setCited(new Set(r.citations)); }
+    const shown = new Set(graph.nodes.map((n) => n.id));
+    const steps = r.tool_trace.map((t) => {
+      const ids = (t.found ?? []).filter((id: string) => shown.has(id));
+      const what = stepLabel(t);
+      return { label: t.error ? `${what} (the query failed)` : `${what}: ${ids.length ? `${ids.length} of the things on this graph` : "nothing that stayed on this graph"}.`, ids };
+    });
+    const finish = [r.answer_id!, ...r.citations].filter((id) => shown.has(id));
+    setReplay({ key: Date.now(), steps, finish, finishLabel: `Answered, citing ${r.citations.length} source${r.citations.length === 1 ? "" : "s"}.` });
   }
 
   /** Draw a what-if result from the Organisation view on the Ask graph, clearly marked as a preview. */
@@ -293,7 +323,10 @@ export default function Workspace() {
                         </div>
                       )}
                       {e.result.tool_trace.length > 0 && (
-                        <div className="trace">Walked the graph with {e.result.tool_trace.map((t) => `${t.name.replace("_", " ")} (${Math.round(t.ms)} ms)`).join(", ")}.</div>
+                        <div className="trace">
+                          Walked the graph with {e.result.tool_trace.map((t) => `${t.name.replace("_", " ")} (${Math.round(t.ms)} ms)`).join(", ")}.
+                          {e.result.answer_id && <> <button className="linkish replay-link" onClick={() => replayAnswer(e)}>Replay how this was found</button></>}
+                        </div>
                       )}
                       {e.frag && (
                         <div className="trace topic-note">
@@ -356,7 +389,7 @@ export default function Workspace() {
                 <button onClick={() => setFitSignal((n) => n + 1)}>Fit</button>
               </Tip>
             </div>
-            <EvidenceGraph fragment={fragment} cited={cited} stale={stale} wave={wave} path={path} onSelect={(id) => (id?.startsWith("more:") ? setFragment((f) => expandMore(f, id)) : setSelected(id))} fitSignal={fitSignal} />
+            <EvidenceGraph fragment={fragment} cited={cited} stale={stale} wave={wave} path={path} onSelect={(id) => (id?.startsWith("more:") ? setFragment((f) => expandMore(f, id)) : setSelected(id))} fitSignal={fitSignal} replay={replay} onReplayEnd={() => setReplay(null)} />
             {fragment.nodes.length > 0 && <GraphKey />}
             {fragment.nodes.length === 0 && <div className="canvas-empty">The evidence behind each answer is drawn here.</div>}
             {fragment.nodes.length > 0 && (

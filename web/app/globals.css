@@ -423,3 +423,11 @@ sup.fn button:hover { text-decoration: underline; }
   align-items: baseline; background: var(--card); border: 1px dashed var(--stamp); padding: 0.3rem 0.6rem; font-size: var(--step--1); color: var(--ink-soft); line-height: 1.4;
 }
 .preview-banner strong { color: var(--stamp); font-weight: 600; }
+
+/* replay how an answer was found */
+.replay-caption {
+  position: absolute; left: 50%; bottom: 2.6rem; transform: translateX(-50%); z-index: 6; max-width: min(36rem, calc(100% - 2rem));
+  display: flex; gap: 0.7rem; align-items: baseline; background: var(--card); border: 1px solid var(--brass); padding: 0.4rem 0.8rem;
+  font-size: var(--step--1); color: var(--ink); box-shadow: 0 1px 3px rgba(24, 35, 58, 0.12);
+}
+.replay-caption .step { color: var(--brass); white-space: nowrap; }
