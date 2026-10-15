@@ -803,3 +803,33 @@ MATCH (x)-[:DERIVED_FROM*1..5]->(e)
 WHERE (x:Belief AND x.status <> 'stale') OR (x:Answer AND coalesce(x.stale, false) = false) OR (x:Action AND x.status = 'pending')
 RETURN labels(x)[0] AS label, count(DISTINCT x) AS n
 """
+
+# --- Explaining a missing answer (lineage/graph/miss.py) ---------------------------------
+PEP_BRIEF = "MATCH (p:PEP {number: $n}) RETURN p.number AS number, p.title AS title, p.status AS status, toString(p.created) AS created"
+
+NEAREST_PEPS = """
+MATCH (p:PEP)
+RETURN p.number AS number, p.title AS title
+ORDER BY abs(p.number - $n), p.number
+LIMIT 2
+"""
+
+FIRST_PEP_ABOUT = """
+MATCH (p:PEP)
+WHERE toLower(p.title) CONTAINS toLower($name)
+RETURN p.number AS number, toString(p.created) AS created
+ORDER BY p.created LIMIT 1
+"""
+
+FIRST_PEP_CONCERNING = """
+MATCH (p:PEP)-[:CONCERNS]->(:Area {name: $name})
+RETURN p.number AS number, toString(p.created) AS created
+ORDER BY p.created LIMIT 1
+"""
+
+EXAMPLE_PEP_AT = """
+MATCH (p:PEP)
+WHERE $as_of IS NULL OR p.created <= date($as_of)
+RETURN p.number AS number
+ORDER BY coalesce(p.pagerank, 0) DESC LIMIT 1
+"""

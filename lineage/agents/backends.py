@@ -93,7 +93,7 @@ class GraphOnlyLLM:
             parts.append("Listed as experts but not recently committing: " + ", ".join(e["name"] for e in listed[:5]) + ".")
         area = session.union.meta.get("area", {})
         session.submitted = {"text": f"For {area.get('name')}: " + " ".join(parts),
-                             "citations": [e["id"] for e in (active + listed)[:8]], "beliefs": []}
+                             "citations": [e["id"] for e in active[:5] + listed[:5]], "beliefs": []}
         return True
 
     async def run_session(self, system: str, prompt: str, session, tool_specs) -> dict:

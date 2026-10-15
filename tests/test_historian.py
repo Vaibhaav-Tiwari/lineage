@@ -68,7 +68,7 @@ async def test_only_unseen_citations_means_abstain_and_nothing_stored(db):
     try:
         llm = FakeLLM([call("decision_path", {"pep": 102}), submit("made up", ["pep:9999"])])
         r = await ask("q", company_g=cg, agent_g=ag, user_g=None, llm=llm, embedder=FakeEmbedder())
-        assert r.abstained and r.text.startswith("I couldn't find evidence")
+        assert r.abstained and r.miss and r.text == r.miss["text"]
         assert r.answer_id is None
         assert await ro(ag, "MATCH (a:Answer) RETURN count(a) AS c") == [{"c": 0}]
     finally:

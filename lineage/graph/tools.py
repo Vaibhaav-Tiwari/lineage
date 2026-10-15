@@ -2,7 +2,7 @@
 looked at (for the evidence view) plus `meta` — a compact payload for the LLM."""
 
 import json
-from datetime import date
+from datetime import date, timedelta
 
 from lineage import ids
 from lineage.db import ro
@@ -130,11 +130,22 @@ async def pep_timeline(g, pep: int, as_of: date | None = None) -> Fragment:
     return f
 
 
+OWNERSHIP_WINDOW_DAYS = 365  # Experts Index is today's; commits cover the last 12 months
+
+
+def ownership_known(as_of: date | None) -> bool:
+    return as_of is None or as_of >= date.today() - timedelta(days=OWNERSHIP_WINDOW_DAYS)
+
+
 async def who_knows(g, topic: str, as_of: date | None = None) -> Fragment:
     found = await ro(g, Q.FIND_AREA, {"t": topic.strip()})
     if not found:
         return Fragment(meta={"experts": [], "summary": f"No area matching '{topic}'."})
     area = found[0]
+    if not ownership_known(as_of):  # don't present today's owners as if they were 2001's
+        return Fragment(meta={"area": area, "experts": [], "summary":
+                              f"Who works on {area['name']} is only recorded for the last 12 months "
+                              f"(the Experts Index and recent commits), not as of {as_of.isoformat()}."})
     f = _fragment(await ro(g, Q.AREA_EXPERTS, {"id": area["id"]}), as_of)
     people: dict[str, dict] = {}
     for e in f.edges:

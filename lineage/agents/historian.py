@@ -9,14 +9,13 @@ from datetime import date
 
 from lineage.db import ro
 from lineage.graph import queries as Q
+from lineage.graph.miss import explain_miss
 from lineage.graph.search import hits_to_fragment, hybrid_search
 from lineage.graph.subgraph import Fragment
 from lineage.graph.tools import TOOL_SPECS, connection, decision_path, pep_timeline, related_peps, who_knows
 from lineage.memory.store import record_answer, record_episode
 
 MAX_TOOL_CALLS = 6
-ABSTAIN = ("I couldn't find evidence in the graph for that. Try naming a PEP number, a Python module "
-           "or a person, for example: \"Who decided PEP 649?\" or \"Who should I ask about asyncio?\"")
 
 SYSTEM = """You are the Historian for the Python project's "company brain": a graph of PEPs (proposals), \
 decisions, the people who wrote and decided them, forum discussions, implementing pull requests, and who \
@@ -42,11 +41,12 @@ class AskResult:
     beliefs: list[dict] = field(default_factory=list)
     tool_trace: list[dict] = field(default_factory=list)
     usage: dict = field(default_factory=dict)
+    miss: dict | None = None  # why there is no answer, and what to try instead
 
     def to_json(self) -> dict:
         return {"answer_id": self.answer_id, "text": self.text, "abstained": self.abstained,
                 "citations": self.citations, "evidence": self.evidence.to_json(), "beliefs": self.beliefs,
-                "tool_trace": self.tool_trace, "usage": self.usage}
+                "tool_trace": self.tool_trace, "usage": self.usage, "miss": self.miss}
 
 
 async def _run_tool(name: str, inp: dict, company_g, embedder, as_of: date | None) -> Fragment:
@@ -166,8 +166,8 @@ async def _finish(question, session: ToolSession, company_g, agent_g, user_g, as
     submitted, seen = session.submitted, session.union.ids()
     cited = [c for c in dict.fromkeys((submitted or {}).get("citations") or []) if c in seen]
     if not submitted or not cited:
-        text = f"LLM unavailable ({usage['error']}). " + ABSTAIN if usage.get("error") else ABSTAIN
-        return AskResult(None, text, True, [], Fragment(), [], session.trace, usage)
+        miss = await explain_miss(company_g, question, as_of, usage.get("error"))
+        return AskResult(None, miss["text"], True, [], Fragment(), [], session.trace, usage, miss)
     beliefs = []
     for b in submitted.get("beliefs") or []:
         ev = [x for x in b.get("evidence") or [] if x in seen]

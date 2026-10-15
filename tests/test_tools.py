@@ -112,3 +112,14 @@ async def test_status_as_of_with_real_event_payload_shape(g):
     await rw(g, """MATCH (e:Event) SET e.payload_json = '{"slug": "pep-101-superseded", "at": "2020-05-01", "before_status": "Accepted", "after_status": "Superseded", "pep": 101}'""")
     f = await decision_path(g, 101, as_of=date(2020, 1, 1))
     assert "status Accepted" in f.meta["summary"]
+
+
+async def test_who_knows_refuses_dates_before_the_ownership_snapshot(g):
+    from datetime import timedelta
+
+    await _setup(g)
+    old = await who_knows(g, "argparse", as_of=date(2001, 7, 14))
+    assert old.meta["experts"] == [] and old.nodes == []
+    assert "last 12 months" in old.meta["summary"]
+    recent = await who_knows(g, "argparse", as_of=date.today() - timedelta(days=30))
+    assert recent.meta["experts"]

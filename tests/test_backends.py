@@ -23,7 +23,8 @@ async def test_graph_only_abstains_without_a_pep(db):
     try:
         r = await ask("What is the airspeed of a swallow?", company_g=cg, agent_g=ag, user_g=None,
                       llm=GraphOnlyLLM(), embedder=FakeEmbedder())
-        assert r.abstained
+        assert r.abstained and r.miss["kind"] == "unrecognised"
+        assert r.to_json()["miss"] == r.miss
     finally:
         await _cleanup(cg, ag, ug)
 
@@ -61,7 +62,7 @@ async def test_claude_code_errors_become_an_explained_abstention(db, monkeypatch
     try:
         r = await ask("Who announced PEP 102?", company_g=cg, agent_g=ag, user_g=None, llm=ClaudeCodeLLM(), embedder=FakeEmbedder())
         assert r.abstained and "weekly limit" in r.usage["error"]
-        assert "LLM unavailable" in r.text
+        assert r.miss["kind"] == "system" and "not about your question" in r.text
     finally:
         await _cleanup(cg, ag, ug)
 
