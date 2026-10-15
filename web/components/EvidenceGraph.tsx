@@ -31,11 +31,13 @@ function stylesheet(font: string, typed: string): any[] {
     { selector: "node[label = 'Area']", style: { shape: "hexagon", "background-color": "#dcebe3", "border-color": "#2e7d5b" } },
     { selector: "node[label = 'Event']", style: { shape: "star", "background-color": "#c2273d", "border-color": "#c2273d", width: 22, height: 22 } },
     { selector: "node[label = 'Answer']", style: { shape: "round-rectangle", width: 26, height: 18, "background-color": "#dcebe3", "border-color": "#2e7d5b", "border-style": "double", "border-width": 3 } },
+    { selector: "node[label = 'More']", style: { shape: "round-rectangle", width: 30, height: 16, "background-color": "#f8f9fa", "border-style": "dashed", "border-color": "#7d8697", "font-style": "italic" } },
     { selector: "node[label = 'Action']", style: { shape: "triangle", width: 22, height: 20, "background-color": "#f8f9fa", "border-color": "#18233a" } },
     { selector: "edge[type = 'DERIVED_FROM']", style: { "line-style": "dotted", "line-color": "#2e7d5b", "target-arrow-color": "#2e7d5b" } },
     { selector: "edge", style: {
         width: 1, "line-color": "#9aa3b2", "curve-style": "bezier", "target-arrow-shape": "triangle", "target-arrow-color": "#9aa3b2",
         "arrow-scale": 0.7, "transition-property": "line-color, width", "transition-duration": 500 } },
+    { selector: "edge[type = 'MORE']", style: { "line-style": "dashed", "target-arrow-shape": "none" } },
     { selector: "edge[type = 'SUPERSEDES']", style: { width: 2.2, "line-color": "#c2273d", "target-arrow-color": "#c2273d" } },
     { selector: "edge:selected, edge.labelled", style: {
         label: "data(type)", "font-family": font, "font-size": 9, color: "#4a5468", "text-rotation": "autorotate",

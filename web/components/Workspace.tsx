@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import { api, AskResult, EventRow, Fragment, GNode, mergeFragments, StewardReport } from "@/lib/api";
+import { api, AskResult, capFanout, EventRow, expandMore, Fragment, GNode, mergeFragments, sharesTopic, StewardReport } from "@/lib/api";
 import TimeRail from "./TimeRail";
 import IndexCard from "./IndexCard";
 import GraphKey from "./GraphKey";
@@ -17,7 +17,8 @@ const EMPTY: Fragment = { nodes: [], edges: [] };
 const n = (k: number, word: string) => `${k} ${word}${k === 1 ? "" : "s"}`;
 
 type ActionItem = { id: string; status: "pending" | "done" | "blocked"; reason?: string };
-type Entry = { kind: "qa"; q: string; asOf: string | null; result?: AskResult; error?: string; actions: ActionItem[]; stale?: string }
+type Entry = { kind: "qa"; q: string; asOf: string | null; result?: AskResult; error?: string; actions: ActionItem[]; stale?: string;
+  frag?: Fragment; prev?: Fragment } // this answer's own graph; the graph it replaced (new topic)
   | { kind: "steward"; text: string; details?: string };
 
 const SUGGESTIONS = [
@@ -88,16 +89,18 @@ export default function Workspace() {
     setEntries((xs) => xs.map((e, j) => (j === i && e.kind === "qa" ? fn(e) : e)));
   }
 
-  async function ask(q: string) {
+  async function ask(q: string, when?: string | null) {
     if (!q.trim() || busy) return;
+    const at = when === undefined ? asOf : when; // a "no answer" button can move the dial
+    if (when !== undefined) setAsOf(when);
     const i = entries.length;
-    setEntries((xs) => [...xs, { kind: "qa", q, asOf, actions: [] }]);
+    setEntries((xs) => [...xs, { kind: "qa", q, asOf: at, actions: [] }]);
     setQuestion("");
     setBusy(true);
     try {
       const context: Record<string, string>[] = entries.slice(-4).map((e): Record<string, string> =>
         e.kind === "steward" ? { note: `Steward: ${e.text}` } : { q: e.q, a: e.result?.text ?? "" });
-      const r = await api.ask(q, UID, asOf, context, selected);
+      const r = await api.ask(q, UID, at, context, selected);
       patchEntry(i, (e) => ({ ...e, result: r }));
       setLastMs(r.tool_trace.reduce((s, t) => s + t.ms, 0));
       if (!r.abstained && r.answer_id) {
@@ -106,8 +109,14 @@ export default function Workspace() {
           nodes: [answer],
           edges: r.citations.filter((c) => r.evidence.nodes.some((n) => n.id === c)).map((c) => ({ src: r.answer_id!, dst: c, type: "DERIVED_FROM" })),
         };
-        setFragment((f) => mergeFragments(mergeFragments(f, r.evidence), memory));
-        setCited((s) => new Set([...s, ...r.citations]));
+        const own = capFanout(mergeFragments(r.evidence, memory), new Set([...r.citations, r.answer_id]));
+        // a follow-up on the same proposal or module builds on the graph; a new topic starts a fresh one
+        const sameTopic = fragment.nodes.length === 0 || sharesTopic(fragment, r.evidence);
+        const before = fragment;
+        setFragment((f) => (sameTopic ? mergeFragments(f, own) : own));
+        setCited((s) => new Set(sameTopic ? [...s, ...r.citations] : r.citations));
+        if (!sameTopic) setPath([]);
+        patchEntry(i, (e) => ({ ...e, frag: own, prev: sameTopic ? undefined : before }));
         setSelected(r.citations.find((c) => c.startsWith("pep:")) ?? r.citations[0] ?? null);
       }
     } catch (err: any) {
@@ -239,8 +248,22 @@ export default function Workspace() {
                           </Tip>
                         ))}
                       </div>
+                      {e.result.miss && e.result.miss.actions.length > 0 && (
+                        <div className="miss-actions">
+                          {e.result.miss.actions.map((a) => (
+                            <button key={a.label} className="btn quiet" disabled={busy}
+                                    onClick={() => (a.question ? ask(a.question, a.as_of) : ask(e.q, a.as_of ?? null))}>{a.label}</button>
+                          ))}
+                        </div>
+                      )}
                       {e.result.tool_trace.length > 0 && (
                         <div className="trace">Walked the graph with {e.result.tool_trace.map((t) => `${t.name.replace("_", " ")} (${Math.round(t.ms)} ms)`).join(", ")}.</div>
+                      )}
+                      {e.frag && (
+                        <div className="trace topic-note">
+                          {e.prev && <>New topic, so the graph started afresh. <button className="linkish" onClick={() => { setFragment((f) => mergeFragments(e.prev!, f)); patchEntry(i, (x) => ({ ...x, prev: undefined })); }}>Bring back the earlier graph</button> </>}
+                          {i < entries.length - 1 && <button className="linkish" onClick={() => { setFragment(e.frag!); setCited(new Set(e.result!.citations)); setPath([]); }}>Show only this answer&rsquo;s graph</button>}
+                        </div>
                       )}
                       {e.result.answer_id && (
                         <div className="actions">
@@ -291,7 +314,7 @@ export default function Workspace() {
                 <button onClick={() => setFitSignal((n) => n + 1)}>Fit</button>
               </Tip>
             </div>
-            <EvidenceGraph fragment={fragment} cited={cited} stale={stale} wave={wave} path={path} onSelect={setSelected} fitSignal={fitSignal} />
+            <EvidenceGraph fragment={fragment} cited={cited} stale={stale} wave={wave} path={path} onSelect={(id) => (id?.startsWith("more:") ? setFragment((f) => expandMore(f, id)) : setSelected(id))} fitSignal={fitSignal} />
             {fragment.nodes.length > 0 && <GraphKey />}
             {fragment.nodes.length === 0 && <div className="canvas-empty">The evidence behind each answer is drawn here.</div>}
             {fragment.nodes.length > 0 && (

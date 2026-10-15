@@ -13,7 +13,11 @@ export type AskResult = {
   beliefs: { text: string; evidence: string[]; confidence: number }[];
   tool_trace: { name: string; input: any; ms: number; error?: string }[];
   usage: Record<string, any>;
+  miss?: Miss | null;
 };
+
+export type MissAction = { label: string; question?: string; as_of?: string | null };
+export type Miss = { kind: "missing" | "not_yet" | "unrecorded" | "unrecognised" | "system"; text: string; actions: MissAction[] };
 
 export type EventRow = { id: string; slug: string; kind: string; summary: string; at: string; applied: boolean; pep: string; by: number[]; source_url: string };
 
@@ -70,6 +74,54 @@ export function mergeFragments(a: Fragment, b: Fragment): Fragment {
   return { nodes: [...nodes.values()], edges: [...edges.values()] };
 }
 
+/** Does the next answer continue the current topic, i.e. share a proposal or a module with it? */
+export function sharesTopic(cur: Fragment, next: Fragment): boolean {
+  const topics = new Set(cur.nodes.filter((n) => n.label === "PEP" || n.label === "Area").map((n) => n.id));
+  return next.nodes.some((n) => topics.has(n.id));
+}
+
+/** Keep big stars readable: a hub with many one-off neighbours shows `max` of them plus a "+N more" node
+ *  that holds the rest (clicking it brings them back). Anything in `keep` always stays. */
+export function capFanout(f: Fragment, keep: Set<string>, max = 8): Fragment {
+  const nbrs = new Map<string, Set<string>>();
+  for (const e of f.edges) {
+    if (!nbrs.has(e.src)) nbrs.set(e.src, new Set());
+    if (!nbrs.has(e.dst)) nbrs.set(e.dst, new Set());
+    nbrs.get(e.src)!.add(e.dst);
+    nbrs.get(e.dst)!.add(e.src);
+  }
+  const hidden = new Set<string>();
+  const more: GNode[] = [];
+  const moreEdges: GEdge[] = [];
+  for (const hub of f.nodes) {
+    const leaves = [...(nbrs.get(hub.id) ?? [])].filter((id) => nbrs.get(id)!.size === 1 && !keep.has(id) && !hidden.has(id));
+    const shown = [...(nbrs.get(hub.id) ?? [])].filter((id) => !leaves.includes(id)).length;
+    const room = Math.max(3, max - shown);
+    if (leaves.length <= room + 1) continue;
+    const extra = leaves.slice(room);
+    extra.forEach((id) => hidden.add(id));
+    const id = `more:${hub.id}`;
+    more.push({ id, label: "More", props: {
+      count: extra.length, of: nodeTitle(hub),
+      hidden: { nodes: f.nodes.filter((n) => extra.includes(n.id)), edges: f.edges.filter((e) => extra.includes(e.src) || extra.includes(e.dst)) },
+    } });
+    moreEdges.push({ src: hub.id, dst: id, type: "MORE" });
+  }
+  if (!more.length) return f;
+  return {
+    nodes: [...f.nodes.filter((n) => !hidden.has(n.id)), ...more],
+    edges: [...f.edges.filter((e) => !hidden.has(e.src) && !hidden.has(e.dst)), ...moreEdges],
+  };
+}
+
+/** Swap a "+N more" node back for what it was hiding. */
+export function expandMore(f: Fragment, moreId: string): Fragment {
+  const m = f.nodes.find((n) => n.id === moreId);
+  if (!m) return f;
+  const rest = { nodes: f.nodes.filter((n) => n.id !== moreId), edges: f.edges.filter((e) => e.dst !== moreId && e.src !== moreId) };
+  return mergeFragments(rest, m.props.hidden as Fragment);
+}
+
 export function nodeDetail(n: GNode): string {
   const p = n.props ?? {};
   switch (n.label) {
@@ -83,6 +135,7 @@ export function nodeDetail(n: GNode): string {
     case "Answer": return `The Historian's answer: ${String(p.text ?? "").slice(0, 140)}…`;
     case "Action": return "Queued action: add the answer to the onboarding FAQ. It can only run while its evidence is current.";
     case "Area": return `Part of Python: ${p.name ?? n.id}.`;
+    case "More": return `${p.count} more linked to ${p.of}, folded away to keep the graph readable. Click to show them.`;
     default: return n.id;
   }
 }
@@ -101,6 +154,7 @@ export function nodeTitle(n: GNode): string {
     case "Area": return p.name ?? n.id.split(":")[1];
     case "Answer": return "Historian's answer";
     case "Action": return "Add to FAQ";
+    case "More": return `+${p.count} more`;
     default: return n.id;
   }
 }

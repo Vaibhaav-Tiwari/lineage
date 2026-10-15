@@ -349,3 +349,8 @@ a { color: var(--cyan); }
 .chosen { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
 .chosen-chip { display: inline-flex; gap: 0.3rem; align-items: center; border: 1px solid var(--ink); padding: 0.1rem 0.2rem 0.1rem 0.5rem; background: var(--card); }
 .chosen-chip button { background: none; border: 0; cursor: pointer; font-size: 1rem; line-height: 1; color: var(--ink-soft); }
+
+.miss-actions { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.4rem 0 0.2rem; }
+.topic-note { display: flex; flex-wrap: wrap; gap: 0.2rem 0.6rem; align-items: baseline; }
+.linkish { background: none; border: 0; padding: 0; color: var(--ink-soft); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; font: inherit; }
+.linkish:hover { color: var(--ink); }
