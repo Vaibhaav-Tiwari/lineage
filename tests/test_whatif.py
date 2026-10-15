@@ -24,6 +24,8 @@ async def test_departure_orphans_area_splits_network_and_cleans_up(db, g):
     assert w["orphaned_areas"] == ["xml"]
     assert w["components_before"] == 1 and w["components_after"] == 2
     assert "a" in w["suggested_successors"]["xml"]  # erin's strongest collaborator
+    assert w["successor_basis"]["xml"] == "collaboration"  # nobody else commits to xml
+    assert w["plain"]["headline"].startswith("If erin left, Python would")
     assert w["authored_peps"] == 1 and w["fork_mb"] >= 0
     # the live graph still has erin, and no fork is left behind
     assert (await g.ro_query("MATCH (p:Person {id:'person:erin'}) RETURN count(p)")).result_set == [[1]]

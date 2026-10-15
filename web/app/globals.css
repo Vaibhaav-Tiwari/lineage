@@ -301,3 +301,12 @@ a { color: var(--cyan); }
 }
 .rail-tick.decision { width: 3px; height: 20px; top: 21px; cursor: help; }
 .rail-tick-hit { position: absolute; top: 16px; width: 12px; height: 30px; transform: translateX(-5px); }
+
+/* ---------- plain-language readings ---------- */
+.plain-list { margin: 0.4rem 0 0.6rem; padding-left: 1.1rem; }
+.plain-list li { margin: 0.2rem 0; }
+.linkish { background: none; border: 0; padding: 0; color: var(--cyan); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; font-size: var(--step--1); }
+.how { margin: 0.5rem 0 0; font-size: var(--step--1); color: var(--ink-soft); }
+.tile-plain { margin: 0.35rem 0 0; font-size: var(--step--1); color: var(--ink-soft); line-height: 1.4; }
+.steward-details { margin-top: 0.35rem; font-size: var(--step--1); color: var(--ink-soft); }
+.steward-details summary { cursor: pointer; color: var(--stamp); }

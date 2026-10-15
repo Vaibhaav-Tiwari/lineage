@@ -18,7 +18,7 @@ const n = (k: number, word: string) => `${k} ${word}${k === 1 ? "" : "s"}`;
 
 type ActionItem = { id: string; status: "pending" | "done" | "blocked"; reason?: string };
 type Entry = { kind: "qa"; q: string; asOf: string | null; result?: AskResult; error?: string; actions: ActionItem[]; stale?: string }
-  | { kind: "steward"; text: string };
+  | { kind: "steward"; text: string; details?: string };
 
 const SUGGESTIONS = [
   "How does Python handle annotations under PEP 563, and who decided it?",
@@ -145,7 +145,7 @@ export default function Workspace() {
           stale: e.result?.answer_id && h.answers.includes(e.result.answer_id) ? rep.summary : e.stale,
           actions: e.actions.map((a) => (h.actions_blocked.includes(a.id) ? { ...a, status: "blocked" as const, reason: "Blocked by the Steward: it rests on knowledge that just changed. Run it to see why." } : a)),
         } : e),
-        { kind: "steward", text: `${rep.summary} I re-checked everything built on ${rep.changed.join(", ")}: ${n(h.answers.length, "answer")} and ${n(h.beliefs.length, "belief")} no longer hold, ${n(h.actions_blocked.length, "queued action")} on hold, and ${n(rep.fixtasks.length, "proposal")} that cite it now have a review task.` },
+        { kind: "steward", text: rep.plain ?? rep.summary, details: `${rep.summary} I re-checked everything built on ${rep.changed.join(", ")}: ${n(h.answers.length, "answer")} and ${n(h.beliefs.length, "belief")} no longer hold, ${n(h.actions_blocked.length, "queued action")} on hold, and ${n(rep.fixtasks.length, "proposal")} that cite it now have a review task.` },
       ]);
       setSelected(rep.changed[0]);
       setCardVersion((v) => v + 1);
@@ -203,9 +203,12 @@ export default function Workspace() {
                 </div>
               )}
               {entries.map((e, i) => e.kind === "steward" ? (
-                <p key={i} className="a-note" style={{ borderLeft: "2px solid var(--stamp)", paddingLeft: "0.7rem", fontSize: "var(--step-0)" }}>
+                <div key={i} className="a-note" style={{ borderLeft: "2px solid var(--stamp)", paddingLeft: "0.7rem", fontSize: "var(--step-0)" }}>
                   <strong>Steward.</strong> {e.text}
-                </p>
+                  {e.details && (
+                    <details className="steward-details"><summary>Details</summary>{e.details}</details>
+                  )}
+                </div>
               ) : (
                 <div key={i}>
                   <p className="q">{e.q}</p>

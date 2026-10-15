@@ -26,6 +26,7 @@ async def test_drift_statuses(g):
     assert by["argparse"]["status"] == "drifting"
     assert by["xml"]["status"] == "orphaned"
     assert by["json"]["status"] == "healthy"
+    assert by["json"]["plain"] == "The listed owners are the people doing the work."
     assert [r["area"] for r in out] == sorted(r["area"] for r in out)  # by area, never a ranking of people
 
 

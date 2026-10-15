@@ -13,6 +13,7 @@ export default function OrgView() {
   const [err, setErr] = useState<string | null>(null);
   const [picked, setPicked] = useState(false);
   const [clusters, setClusters] = useState<any[]>([]);
+  const [showHow, setShowHow] = useState(false);
 
   useEffect(() => {
     api.drift().then(setAreas).catch(() => setErr("Could not reach the API."));
@@ -25,7 +26,7 @@ export default function OrgView() {
   }, [q, picked]);
 
   async function simulate(p: any) {
-    setPicked(true); setPeople([]); setQ(p.name ?? p.github); setRunning(p.name ?? p.github); setW(null);
+    setShowHow(false); setPicked(true); setPeople([]); setQ(p.name ?? p.github); setRunning(p.name ?? p.github); setW(null);
     try { setW(await api.whatif(p.id)); } finally { setRunning(null); }
   }
 
@@ -59,17 +60,18 @@ export default function OrgView() {
       {running && <p className="working">Copying the whole graph, removing {running} from the copy, re-running the algorithms…</p>}
       {w && (
         <div className="verdict">
-          <h3>If {w.person.name} left</h3>
-          <p style={{ margin: 0 }}>
-            Computed on a throwaway copy of the graph ({Math.round(w.fork_mb)} MB, {Math.round(w.ms / 100) / 10} s); the live graph was not touched.
-            {" "}Collaboration splits from {w.components_before} into {w.components_after} separate groups.
-            {" "}{w.orphaned_areas.length ? `${w.orphaned_areas.join(", ")} would have nobody active.` : "No module is left without anyone active."}
-            {" "}{w.at_risk_areas.length ? `${w.at_risk_areas.map((a: any) => a.area).join(", ")} would rest on a single person.` : ""}
-            {w.bridge_rank ? ` Among ${w.people_ranked} contributors, they are the number ${w.bridge_rank} bridge between otherwise separate groups (betweenness).` : ""}
-            {" "}They wrote {w.authored_peps} proposals{w.decisions_announced ? ` and announced ${w.decisions_announced} decision${w.decisions_announced === 1 ? "" : "s"}` : ""}.
-          </p>
-          {Object.keys(w.suggested_successors).length > 0 && (
-            <p style={{ margin: "0.5rem 0 0" }}>Likely successors: {Object.entries(w.suggested_successors).map(([a, s]: any) => `${a}: ${s.join(", ")}`).join("; ")}.</p>
+          <h3>{w.plain.headline}</h3>
+          <ul className="plain-list">{w.plain.bullets.map((b: string) => <li key={b}>{b}</li>)}</ul>
+          <button className="linkish" aria-expanded={showHow} onClick={() => setShowHow(!showHow)}>
+            {showHow ? "Hide how this was measured" : "Show how this was measured"}
+          </button>
+          {showHow && (
+            <p className="how">
+              Computed on a throwaway copy of the graph ({Math.round(w.fork_mb)} MB, {Math.round(w.ms / 100) / 10} s) with <span className="typed">GRAPH.COPY</span>; the live graph was not touched.
+              {" "}Weakly connected components on the collaboration graph: {w.components_before} groups before, {w.components_after} after.
+              {" "}Betweenness centrality: rank {w.bridge_rank} of {w.people_ranked} (score {w.bridge_score}).
+              {" "}Modules counted as covered when someone is listed and not inactive, or made at least 3 commits in the last 12 months.
+            </p>
           )}
         </div>
       )}
@@ -88,6 +90,7 @@ export default function OrgView() {
               <div className={`status ${lost.has(a.area) ? "orphaned" : a.status}`}>
                 {lost.has(a.area) ? "would be orphaned" : risk.has(a.area) ? "would rest on one person" : a.status}
               </div>
+              <p className="tile-plain">{a.plain}</p>
               <div className="people">
                 {everyone.map((p: any) => (
                   <Tip key={p} text={listed.has(p) ? (committing.has(p) ? "Listed as an owner and committing in the last 12 months." : "Listed as an owner, but no commits in the last 12 months.") : "Committing regularly, but not listed as an owner."}>

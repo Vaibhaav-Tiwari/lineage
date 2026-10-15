@@ -612,14 +612,14 @@ DELETE_PERSON = "MATCH (p:Person {id: $id}) DELETE p"
 
 TOP_COLLABORATORS = """
 MATCH (:Person {id: $id})-[c:COLLABORATED]-(y:Person)
-RETURN coalesce(y.github, y.name, y.id) AS who, c.weight AS w
+RETURN coalesce(y.name, y.github, y.id) AS who, c.weight AS w
 ORDER BY w DESC LIMIT 5
 """
 
 AREA_COMMITTERS = """
 MATCH (y:Person)-[c:COMMITTED_TO]->(a:Area {id: $area})
 WHERE y.id <> $id
-RETURN coalesce(y.github, y.name, y.id) AS who, c.count AS n
+RETURN coalesce(y.name, y.github, y.id) AS who, c.count AS n
 ORDER BY n DESC LIMIT 3
 """
 

@@ -34,6 +34,7 @@ async def test_apply_event_ripples_and_fans_out_to_every_agent(db, tmp_path):
 
         rep = await apply_event("pep-101-superseded", company_g=cg, agent_graphs={"historian": a1, "other": a2})
         assert rep["changed"] == ["pep:101"]
+        assert rep["plain"].startswith("PEP 101 has been replaced.")
         assert "pep:103" in rep["ripple"]["soft"]  # 103 REQUIRES 101
         assert rep["agents"]["historian"]["actions_blocked"] == [act]
         assert rep["agents"]["other"] == {"beliefs": [], "answers": [], "actions_blocked": []}

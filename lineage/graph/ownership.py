@@ -32,4 +32,8 @@ async def ownership_drift(g, min_commits: int = 3, areas: list[str] | None = Non
             "revealed": sorted(({"who": w, **x} for w, x in rv.items()), key=lambda x: x["who"]),
             "listed_but_quiet": quiet, "active_but_unlisted": unlisted, "status": status,
         })
+    from lineage.graph.plain import explain_drift
+
+    for r in out:
+        r["plain"] = explain_drift(r)
     return sorted(out, key=lambda r: r["area"])

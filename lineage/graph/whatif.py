@@ -48,7 +48,7 @@ async def departure_impact(db, person_id: str, base: str = "lineage:company") ->
     finally:
         await fork.delete()
 
-    orphaned, at_risk, successors = [], [], {}
+    orphaned, at_risk, successors, basis = [], [], {}, {}
     for aid, b in before_active.items():
         left = after_active.get(aid, {}).get("n", 0)
         if left == 0:
@@ -57,12 +57,17 @@ async def departure_impact(db, person_id: str, base: str = "lineage:company") ->
             at_risk.append({"area": b["name"], "remaining": 1})
         if left <= 1:
             committers = [r["who"] for r in await ro(live, Q.AREA_COMMITTERS, {"area": aid, "id": person_id})]
-            successors[b["name"]] = list(dict.fromkeys(committers + collaborators))[:3]
-    return {
+            successors[b["name"]] = list(dict.fromkeys(committers or collaborators))[:3]
+            basis[b["name"]] = "commits" if committers else "collaboration"
+    from lineage.graph.plain import explain_departure
+
+    result = {
         "person": found[0], "fork": fork_name, "fork_mb": fork_mb,
         "orphaned_areas": sorted(orphaned), "at_risk_areas": sorted(at_risk, key=lambda x: x["area"]),
         "components_before": comps_before, "components_after": comps_after,
-        "suggested_successors": successors, "authored_peps": footprint["authored"],
+        "suggested_successors": successors, "successor_basis": basis, "authored_peps": footprint["authored"],
         "decisions_announced": footprint["announced"],
         "bridge_rank": rank, "bridge_score": round(float(score), 1), "people_ranked": len(ranking), "ms": round((time.perf_counter() - t0) * 1000),
     }
+    result["plain"] = explain_departure(result)
+    return result

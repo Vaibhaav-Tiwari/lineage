@@ -30,6 +30,9 @@ async def apply_event(slug: str, *, company_g, agent_graphs: dict, shared_g=None
         from lineage.memory.coord import open_fix_tasks_for
 
         report["fixtasks"] = await open_fix_tasks_for(shared_g, company_g, ripple, reason, event=slug)
+    from lineage.graph.plain import explain_ripple
+
+    report["plain"] = explain_ripple(report)
     return report
 
 

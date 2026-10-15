@@ -25,6 +25,7 @@ export type StewardReport = {
   paths: Fragment;
   agents: Record<string, { beliefs: string[]; answers: string[]; actions_blocked: string[] }>;
   fixtasks: string[];
+  plain?: string;
 };
 
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
