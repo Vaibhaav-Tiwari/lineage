@@ -619,7 +619,7 @@ ORDER BY w DESC LIMIT 5
 AREA_COMMITTERS = """
 MATCH (y:Person)-[c:COMMITTED_TO]->(a:Area {id: $area})
 WHERE y.id <> $id
-RETURN coalesce(y.name, y.github, y.id) AS who, c.count AS n
+RETURN y.id AS id, coalesce(y.name, y.github, y.id) AS who, c.count AS n
 ORDER BY n DESC LIMIT 3
 """
 
@@ -747,14 +747,14 @@ DELETE_PEOPLE = "MATCH (p:Person) WHERE p.id IN $ids DELETE p"
 TOP_COLLABORATORS_OF_GROUP = """
 MATCH (x:Person)-[c:COLLABORATED]-(y:Person)
 WHERE x.id IN $ids AND NOT y.id IN $ids
-RETURN coalesce(y.name, y.github, y.id) AS who, sum(c.weight) AS w
+RETURN y.id AS id, coalesce(y.name, y.github, y.id) AS who, sum(c.weight) AS w
 ORDER BY w DESC LIMIT 5
 """
 
 AREA_COMMITTERS_EXCEPT = """
 MATCH (y:Person)-[c:COMMITTED_TO]->(a:Area {id: $area})
 WHERE NOT y.id IN $ids
-RETURN coalesce(y.name, y.github, y.id) AS who, c.count AS n
+RETURN y.id AS id, coalesce(y.name, y.github, y.id) AS who, c.count AS n
 ORDER BY n DESC LIMIT 3
 """
 
@@ -790,8 +790,30 @@ LIMIT 8
 
 PEP_BRIEFS = """
 MATCH (p:PEP) WHERE p.id IN $ids
-RETURN p.id AS id, p.number AS number, p.title AS title, p.status AS status
+RETURN p.id AS id, p.number AS number, p.title AS title, p.status AS status, toString(p.created) AS created
 ORDER BY coalesce(p.pagerank, 0) DESC
+"""
+
+# How each dependent rests on the reversed proposal (what-if preview).
+DEPENDENT_RELATIONS = """
+MATCH (d:PEP)-[r:REFERENCES|REQUIRES]->(:PEP {id: $pid})
+WHERE d.id IN $ids
+RETURN d.id AS id, type(r) AS rel
+"""
+
+# The agent's current answers that rest on any of these refs (read-only, for the preview graph).
+DEPENDENT_ANSWERS = """
+MATCH (e:Evidence) WHERE e.ref IN $refs
+MATCH (a:Answer)-[:DERIVED_FROM*1..5]->(e)
+WHERE coalesce(a.stale, false) = false
+RETURN DISTINCT a.id AS id, a.text AS text, e.ref AS ref
+"""
+
+# Who left, and how they were tied to the modules their leaving affects (departure what-if graph).
+PEOPLE_AREA_LINKS = """
+MATCH (p:Person)-[r:EXPERT_IN|COMMITTED_TO]->(a:Area)
+WHERE p.id IN $ids AND a.id IN $areas
+RETURN DISTINCT p.id AS p, type(r) AS t, a.id AS a
 """
 
 CHUNKS_OF_PEPS = "MATCH (c:Chunk)-[:PART_OF]->(p:PEP) WHERE p.id IN $ids RETURN c.id AS id"

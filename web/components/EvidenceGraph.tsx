@@ -77,6 +77,19 @@ function stylesheet(font: string, typed: string): any[] {
     { selector: "node[label = 'Decision'].stale", style: { "background-image": "data(art)", "background-opacity": 0, "border-width": 0, opacity: 0.45 } },
     { selector: "node[label = 'Answer'].stale", style: { "background-image": "data(artStale)", "background-opacity": 0, "border-width": 0 } },
     { selector: "node[label = 'Decision'].cited, node[label = 'Answer'].cited", style: { "border-width": 0 } },
+    // ---- what-if previews: nothing is changed, so these are marked as "would", never as stale ----
+    { selector: "node[would = 'reverse']", style: { "border-color": "#c2273d", "border-style": "dashed", "border-width": 2.5 } },
+    { selector: "node[would = 'review'][label = 'PEP'], node[would = 'review'][label = 'Answer']", style: {
+        "background-image": "data(artStale)", "border-style": "dashed", "border-color": "#7d8697" } },
+    { selector: "node[would = 'review'][label = 'Answer']", style: { "border-width": 0 } },
+    { selector: "node[would = 'leave']", style: { "border-color": "#c2273d", "border-style": "dashed", "border-width": 2, color: "#c2273d" } },
+    { selector: "node[would = 'step_in']", style: { "border-color": "#2e7d5b", "border-width": 2.5, color: "#2e7d5b" } },
+    { selector: "node[would = 'orphaned']", style: { "border-color": "#c2273d", "border-width": 2.5, "background-color": "#f6dde1" } },
+    { selector: "node[would = 'one_left']", style: { "border-color": "#c2273d", "border-width": 1.5, "border-style": "dashed" } },
+    { selector: "edge[type = 'STEP_IN']", style: {
+        "line-style": "dashed", "line-color": "#2e7d5b", "target-arrow-color": "#2e7d5b", label: "could step in", "font-family": font,
+        "font-style": "italic", "font-size": 10, color: "#2e7d5b", "text-rotation": "autorotate", "text-background-color": "#eef1f3",
+        "text-background-opacity": 1 } },
   ];
 }
 
@@ -158,7 +171,7 @@ export default function EvidenceGraph({
       c.elements().filter((el) => el.isNode() && !ids.has(el.id())).remove();
       const added: any[] = [];
       for (const n of fragment.nodes) {
-        const data = { id: n.id, label: n.label, title: nodeTitle(n), detail: nodeDetail(n), kind: n.props?.kind ?? "", ...art(n, fonts.current) };
+        const data = { id: n.id, label: n.label, title: nodeTitle(n), detail: nodeDetail(n), kind: n.props?.kind ?? "", would: n.props?.would ?? "", ...art(n, fonts.current) };
         const el = c.getElementById(n.id);
         if (el.nonempty()) el.data(data);
         else added.push({ group: "nodes", data });
@@ -171,7 +184,10 @@ export default function EvidenceGraph({
       if (added.length) {
         c.add(added);
         c.layout({ name: "fcose", animate: true, animationDuration: 650, randomize: c.nodes().length === added.filter((a) => a.group === "nodes").length,
-                   nodeRepulsion: 20000, idealEdgeLength: 115, nodeSeparation: 110, padding: 40, nodeDimensionsIncludeLabels: true } as any).run();
+                   nodeRepulsion: 20000, idealEdgeLength: 115, nodeSeparation: 110, padding: 40, nodeDimensionsIncludeLabels: true,
+                   // a handful of nodes would otherwise be blown up to fill the canvas
+                   stop: () => { if (c.zoom() > 1.25) { c.zoom({ level: 1.25, renderedPosition: { x: c.width() / 2, y: c.height() / 2 } }); c.center(); } },
+                 } as any).run();
       }
     }, cy ? 0 : 120);
     return () => window.clearTimeout(t);
@@ -223,7 +239,9 @@ export default function EvidenceGraph({
   useEffect(() => {
     const c = cyRef.current;
     if (!c || !fitSignal) return;
-    const t = window.setTimeout(() => { c.resize(); c.animate({ fit: { eles: c.elements(), padding: 40 } }, { duration: 300 }); }, 280);
+    const t = window.setTimeout(() => { c.resize(); c.animate({ fit: { eles: c.elements(), padding: 40 } }, {
+      duration: 300, complete: () => { if (c.zoom() > 1.25) { c.zoom({ level: 1.25, renderedPosition: { x: c.width() / 2, y: c.height() / 2 } }); c.center(); } },
+    }); }, 280);
     return () => window.clearTimeout(t);
   }, [fitSignal]);
 

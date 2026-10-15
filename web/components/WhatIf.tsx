@@ -2,10 +2,13 @@
 
 import { useCallback, useState } from "react";
 import { api } from "@/lib/api";
+import type { Fragment } from "@/lib/api";
 import Combo from "./Combo";
+import Tip from "./Tip";
 
 type Mode = "person" | "group" | "proposal";
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
+const SHOW = 6;
 
 function personMeta(p: any) {
   const bits = [];
@@ -15,7 +18,10 @@ function personMeta(p: any) {
   return bits.join(", ");
 }
 
-export default function WhatIf({ onResult }: { onResult: (w: any | null) => void }) {
+export default function WhatIf({ onResult, onShowGraph }: {
+  onResult: (w: any | null) => void;
+  onShowGraph: (f: Fragment, title: string, focus: string | null) => void;
+}) {
   const [mode, setMode] = useState<Mode>("person");
   const [group, setGroup] = useState<any[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
@@ -30,6 +36,14 @@ export default function WhatIf({ onResult }: { onResult: (w: any | null) => void
     setBusy(`Copying the whole graph, removing ${people.map((p) => p.name).join(", ")} from the copy, re-running the algorithms…`);
     setResult(null); setPreview(null); setShowHow(false); onResult(null);
     try { const w = await api.whatif(people.map((p) => p.id)); setResult(w); onResult(w); } finally { setBusy(null); }
+  }
+
+  function showPeople(focus: string | null) {
+    onShowGraph(result.fragment, `If ${result.person.name} left: names in red leave, modules in red lose their owner, names in green could step in.`, focus);
+  }
+
+  function showReversal(focus: string | null) {
+    onShowGraph(preview.fragment, `If PEP ${preview.pep.number} were reversed, the hatched proposals and answers would need review.`, focus);
   }
 
   async function runPreview(pep: any) {
@@ -90,6 +104,39 @@ export default function WhatIf({ onResult }: { onResult: (w: any | null) => void
         <div className="verdict">
           <h3>{result.plain.headline}</h3>
           <ul className="plain-list">{result.plain.bullets.map((b: string) => <li key={b}>{b}</li>)}</ul>
+          {result.areas?.length > 0 && (
+            <ul className="affected" aria-label="Parts of Python affected">
+              {result.areas.slice(0, SHOW).map((a: any) => (
+                <li key={a.id}>
+                  <Tip text={a.state === "orphaned"
+                    ? `Nobody else is listed for ${a.name} or has committed to it in the last 12 months. Click to see it on the graph.`
+                    : `Only one person would still be looking after ${a.name}. Click to see it on the graph.`}>
+                    <button className="row-link" onClick={() => showPeople(a.id)}><span className="typed">{a.name}</span></button>
+                  </Tip>
+                  <span className={`state ${a.state}`}>{a.state === "orphaned" ? "no one left" : "one person left"}</span>
+                  {a.successors.length > 0 && (
+                    <span className="meta">
+                      Could step in:{" "}
+                      {a.successors.map((x: any, i: number) => (
+                        <span key={x.id}>
+                          {i > 0 && ", "}
+                          <Tip text={x.basis === "commits"
+                            ? `${plural(x.commits, "commit")} to ${a.name} in the last 12 months. Click to see them on the graph.`
+                            : `Works most closely with ${result.person.name}; nobody else commits to ${a.name}. Click to see them on the graph.`}>
+                            <button className="linkish" onClick={() => showPeople(x.id)}>{x.name}</button>
+                          </Tip>
+                        </span>
+                      ))}
+                    </span>
+                  )}
+                </li>
+              ))}
+              {result.areas.length > SHOW && <li className="meta">and {result.areas.length - SHOW} more on the graph</li>}
+            </ul>
+          )}
+          <div className="whatif-actions">
+            <button className="btn" onClick={() => showPeople(null)}>Show on the graph</button>
+          </div>
           <button className="linkish" aria-expanded={showHow} onClick={() => setShowHow(!showHow)}>
             {showHow ? "Hide how this was measured" : "Show how this was measured"}
           </button>
@@ -109,11 +156,23 @@ export default function WhatIf({ onResult }: { onResult: (w: any | null) => void
           <h3>If PEP {preview.pep.number} were reversed</h3>
           <p style={{ margin: "0 0 0.5rem" }}>{preview.plain}</p>
           {preview.dependents.length > 0 && (
-            <div className="people">
-              {preview.dependents.slice(0, 14).map((d: any) => <span key={d.id} className="person" title={d.title}>PEP {d.number}</span>)}
-              {preview.dependents.length > 14 && <span className="meta">and {preview.dependents.length - 14} more</span>}
-            </div>
+            <ul className="affected" aria-label="Proposals that would need review">
+              {preview.dependents.slice(0, SHOW).map((d: any) => (
+                <li key={d.id}>
+                  <Tip text={`${d.title}. ${d.status ?? "Status unknown"}${d.created ? `, written ${d.created}` : ""}. It ${d.relation} PEP ${preview.pep.number}, so it would need review. Click to see it on the graph.`}>
+                    <button className="row-link" onClick={() => showReversal(d.id)}>
+                      <span className="typed">PEP {d.number}</span> <span className="ttl">{d.title}</span>
+                    </button>
+                  </Tip>
+                  <span className="meta">{[d.status, d.created?.slice(0, 4)].filter(Boolean).join(", ")}. {d.relation === "requires" ? "Requires" : "Cites"} PEP {preview.pep.number}.</span>
+                </li>
+              ))}
+              {preview.dependents.length > SHOW && <li className="meta">and {preview.dependents.length - SHOW} more on the graph</li>}
+            </ul>
           )}
+          <div className="whatif-actions">
+            <button className="btn" onClick={() => showReversal(preview.pep.id)}>Show on the graph</button>
+          </div>
           <p className="how">A dry run of the Steward: read-only queries walk the citation graph and every agent&rsquo;s DERIVED_FROM chains. To really apply a change, use a red pin on the timeline.</p>
         </div>
       )}

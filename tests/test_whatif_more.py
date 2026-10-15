@@ -72,3 +72,26 @@ async def test_pep_search_by_number_or_title(g):
 def test_preview_plain_when_nothing_depends():
     s = explain_preview({"pep": {"number": 1, "title": "X"}, "dependents": [], "agents": {"historian": {"answers": 0, "beliefs": 0, "actions": 0}}})
     assert "no other proposal cites it" in s.lower() and "nothing has been changed" in s.lower()
+
+
+async def test_preview_reversal_explains_each_dependent_and_draws_a_graph(db, g):
+    await ensure_company_schema(g)
+    await rw(g, """CREATE (p:PEP {id:'pep:484', number:484, title:'Type Hints', status:'Final', pagerank:0.5}),
+                          (a:PEP {id:'pep:585', number:585, title:'Generics', status:'Final', created: date('2019-03-03'), pagerank:0.2})-[:REFERENCES]->(p),
+                          (b:PEP {id:'pep:604', number:604, title:'Unions', status:'Final', created: date('2019-08-28'), pagerank:0.1})-[:REQUIRES]->(p)""")
+    agent = db.select_graph(g.name + ":agent:historian")
+    try:
+        await ensure_agent_schema(agent)
+        from lineage.memory.store import record_answer
+
+        ans = await record_answer(agent, "q", "Type hints came from PEP 484.", ["pep:484"], [], None)
+        r = await preview_reversal(g, 484, agent_graphs={"historian": agent})
+        rows = {d["id"]: d for d in r["dependents"]}
+        assert rows["pep:585"]["relation"] == "cites" and rows["pep:604"]["relation"] == "requires"
+        assert rows["pep:585"]["created"] == "2019-03-03"
+        would = {n["id"]: n["props"].get("would") for n in r["fragment"]["nodes"]}
+        assert would == {"pep:484": "reverse", "pep:585": "review", "pep:604": "review", ans: "review"}
+        edges = {(e["src"], e["type"], e["dst"]) for e in r["fragment"]["edges"]}
+        assert ("pep:585", "REFERENCES", "pep:484") in edges and (ans, "DERIVED_FROM", "pep:484") in edges
+    finally:
+        await agent.delete()

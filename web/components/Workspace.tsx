@@ -48,6 +48,8 @@ export default function Workspace() {
   const [showLeft, setShowLeft] = useState(true);
   const [showRight, setShowRight] = useState(true);
   const [fitSignal, setFitSignal] = useState(0);
+  const [previewNote, setPreviewNote] = useState<string | null>(null);
+  const [beforePreview, setBeforePreview] = useState<Fragment>(EMPTY);
   const focus = !showLeft && !showRight;
   const setPanels = (l: boolean, r: boolean) => { setShowLeft(l); setShowRight(r); setFitSignal((n) => n + 1); };
   useEffect(() => {
@@ -119,9 +121,12 @@ export default function Workspace() {
         };
         const own = capFanout(mergeFragments(r.evidence, memory), new Set([...r.citations, r.answer_id]));
         // a follow-up on the same proposal or module builds on the graph; a new topic starts a fresh one
-        const sameTopic = fragment.nodes.length === 0 || sharesTopic(fragment, r.evidence);
-        const before = fragment;
-        setFragment((f) => (sameTopic ? mergeFragments(f, own) : own));
+        // a what-if preview on the canvas is not part of the conversation: answers build on the graph behind it
+        const base = previewNote ? beforePreview : fragment;
+        if (previewNote) { setPreviewNote(null); setBeforePreview(EMPTY); }
+        const sameTopic = base.nodes.length === 0 || sharesTopic(base, r.evidence);
+        const before = base;
+        setFragment(sameTopic ? mergeFragments(base, own) : own);
         setCited((s) => new Set(sameTopic ? [...s, ...r.citations] : r.citations));
         if (!sameTopic) setPath([]);
         patchEntry(i, (e) => ({ ...e, frag: own, prev: sameTopic ? undefined : before }));
@@ -155,6 +160,21 @@ export default function Workspace() {
       const culprit = chain[chain.length - 1];
       if (culprit) setSelected(culprit);
     }
+  }
+
+  /** Draw a what-if result from the Organisation view on the Ask graph, clearly marked as a preview. */
+  function showPreview(frag: Fragment, title: string, focus: string | null) {
+    if (!previewNote) setBeforePreview(fragment);
+    setPreviewNote(title);
+    setFragment(frag);
+    setCited(new Set()); setPath([]);
+    setSelected(focus);
+    setView("ask");
+  }
+
+  function closePreview() {
+    setFragment(beforePreview);
+    setPreviewNote(null); setBeforePreview(EMPTY); setSelected(null);
   }
 
   async function apply(slug: string) {
@@ -316,6 +336,12 @@ export default function Workspace() {
           </section>
 
           <section className="canvas" aria-label="Evidence">
+            {previewNote && (
+              <div className="preview-banner" role="status">
+                <span><strong>Preview.</strong> {previewNote} Nothing has been changed.</span>
+                <button className="linkish" onClick={closePreview}>Back to your graph</button>
+              </div>
+            )}
             <div className="canvas-tools" role="toolbar" aria-label="Graph view">
               <Tip side="bottom" text={showLeft ? "Hide the conversation to give the graph more room." : "Show the conversation again."}>
                 <button onClick={() => setPanels(!showLeft, showRight)} aria-pressed={!showLeft}>{showLeft ? "Hide conversation" : "Show conversation"}</button>
@@ -343,7 +369,7 @@ export default function Workspace() {
           </aside>
         </main>
       )}
-      {view === "org" && <OrgView />}
+      {view === "org" && <OrgView onShowGraph={showPreview} />}
       {view === "memory" && <MemoryView uid={UID} />}
 
       <footer className="strip">

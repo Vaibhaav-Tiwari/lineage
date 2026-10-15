@@ -37,7 +37,8 @@ async def departure_impact(db, person_ids: str | list[str], base: str = "lineage
     before_active = await _active(live, areas)
     comps_before = await _components(live)
     footprint = (await ro(live, Q.GROUP_FOOTPRINT, {"ids": ids}))[0]
-    collaborators = [r["who"] for r in await ro(live, Q.TOP_COLLABORATORS_OF_GROUP, {"ids": ids})]
+    collab_rows = await ro(live, Q.TOP_COLLABORATORS_OF_GROUP, {"ids": ids})
+    collaborators = [r["who"] for r in collab_rows]
     ranking = await ro(live, Q.BETWEENNESS_PEOPLE)
     ranks = [i + 1 for i, r in enumerate(ranking) if r["id"] in ids]
     rank = min(ranks) if ranks else None
@@ -54,7 +55,7 @@ async def departure_impact(db, person_ids: str | list[str], base: str = "lineage
     finally:
         await fork.delete()
 
-    orphaned, at_risk, successors, basis = [], [], {}, {}
+    orphaned, at_risk, successors, basis, affected = [], [], {}, {}, []
     for aid, b in before_active.items():
         left = after_active.get(aid, {}).get("n", 0)
         if left == 0:
@@ -62,9 +63,13 @@ async def departure_impact(db, person_ids: str | list[str], base: str = "lineage
         elif left == 1:
             at_risk.append({"area": b["name"], "remaining": 1})
         if left <= 1:
-            committers = [r["who"] for r in await ro(live, Q.AREA_COMMITTERS_EXCEPT, {"area": aid, "ids": ids})]
+            commit_rows = await ro(live, Q.AREA_COMMITTERS_EXCEPT, {"area": aid, "ids": ids})
+            committers = [r["who"] for r in commit_rows]
             successors[b["name"]] = list(dict.fromkeys(committers or collaborators))[:3]
             basis[b["name"]] = "commits" if committers else "collaboration"
+            picks = [{"id": r["id"], "name": r["who"], "basis": "commits", "commits": r["n"]} for r in commit_rows] or \
+                    [{"id": r["id"], "name": r["who"], "basis": "collaboration", "commits": None} for r in collab_rows]
+            affected.append({"id": aid, "name": b["name"], "state": "orphaned" if left == 0 else "one_left", "successors": picks[:3]})
     names = [found[i]["name"] for i in ids]
     label = names[0] if len(names) == 1 else ", ".join(names[:-1]) + " and " + names[-1]
     result = {
@@ -77,8 +82,24 @@ async def departure_impact(db, person_ids: str | list[str], base: str = "lineage
         "bridge_rank": rank, "bridge_score": round(float(score), 1), "people_ranked": len(ranking),
         "ms": round((time.perf_counter() - t0) * 1000),
     }
+    result["areas"] = sorted(affected, key=lambda a: (a["state"] != "orphaned", a["name"]))
+    result["fragment"] = await _departure_graph(live, result["people"], result["areas"])
     result["plain"] = explain_departure(result)
     return result
+
+
+async def _departure_graph(g, people: list[dict], areas: list[dict]) -> dict:
+    """What the departure would look like on the graph: who leaves, what they leave behind, who could step in."""
+    nodes = {p["id"]: {"id": p["id"], "label": "Person", "props": {"name": p.get("name"), "would": "leave"}} for p in people}
+    edges = []
+    for a in areas:
+        nodes[a["id"]] = {"id": a["id"], "label": "Area", "props": {"name": a["name"], "would": a["state"]}}
+        for s in a["successors"]:
+            nodes.setdefault(s["id"], {"id": s["id"], "label": "Person", "props": {"name": s["name"], "would": "step_in"}})
+            edges.append({"src": s["id"], "dst": a["id"], "type": "STEP_IN"})
+    links = await ro(g, Q.PEOPLE_AREA_LINKS, {"ids": [p["id"] for p in people], "areas": [a["id"] for a in areas]})
+    edges += [{"src": r["p"], "dst": r["a"], "type": r["t"]} for r in links]
+    return {"nodes": list(nodes.values()), "edges": edges}
 
 
 async def preview_reversal(g, pep: int, agent_graphs: dict, depth: int = 1) -> dict:
@@ -99,9 +120,34 @@ async def preview_reversal(g, pep: int, agent_graphs: dict, depth: int = 1) -> d
     for name, ag in agent_graphs.items():
         counts = {r["label"]: r["n"] for r in await ro(ag, Q.DEPENDENTS_PREVIEW, {"refs": refs})}
         agents[name] = {"answers": counts.get("Answer", 0), "beliefs": counts.get("Belief", 0), "actions": counts.get("Action", 0)}
+    rel = {r["id"]: r["rel"] for r in await ro(g, Q.DEPENDENT_RELATIONS, {"pid": pid, "ids": soft})} if soft else {}
+    for d in dependents:
+        d["relation"] = {"REQUIRES": "requires"}.get(rel.get(d["id"]), "cites")
     result = {"pep": found[0], "dependents": dependents, "agents": agents}
     result["plain"] = explain_preview(result)
+    result["fragment"] = await _reversal_graph(g, pid, soft, refs, agent_graphs)
     return result
+
+
+async def _reversal_graph(g, pid: str, soft: list[str], refs: list[str], agent_graphs: dict) -> dict:
+    """The preview as a graph: the proposal that would be reversed, what would need review."""
+    from lineage.graph.tools import _fragment
+
+    frag = _fragment(await ro(g, Q.RIPPLE_EDGES, {"ids": [pid] + soft})).to_json()
+    nodes = {n["id"]: n for n in frag["nodes"]}
+    for i in [pid] + soft:  # proposals with no edge among themselves still belong on the graph
+        nodes.setdefault(i, {"id": i, "label": "PEP", "props": {"number": int(i.split(":")[1])}})
+    for i, n in nodes.items():
+        n["props"] = {**n.get("props", {}), "stale": False, "would": "reverse" if i == pid else "review"}
+    edges = list(frag["edges"])
+    for ag in agent_graphs.values():
+        for r in await ro(ag, Q.DEPENDENT_ANSWERS, {"refs": refs}):
+            nodes.setdefault(r["id"], {"id": r["id"], "label": "Answer", "props": {"text": r["text"], "would": "review"}})
+            edges.append({"src": r["id"], "dst": r["ref"] if r["ref"] in nodes else pid, "type": "DERIVED_FROM"})
+    briefs = {b["id"]: b for b in await ro(g, Q.PEP_BRIEFS, {"ids": [pid] + soft})}
+    for i, b in briefs.items():
+        nodes[i]["props"].update({"title": b["title"], "status": b["status"], "created": b["created"]})
+    return {"nodes": list(nodes.values()), "edges": list({(e["src"], e["type"], e["dst"]): e for e in edges}.values())}
 
 
 async def search_people(g, q: str) -> list[dict]:

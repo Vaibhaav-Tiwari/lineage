@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import type { Fragment } from "@/lib/api";
 import Tip from "./Tip";
 import WhatIf from "./WhatIf";
 
-export default function OrgView() {
+export default function OrgView({ onShowGraph }: { onShowGraph: (f: Fragment, title: string, focus: string | null) => void }) {
   const [areas, setAreas] = useState<any[]>([]);
   const [w, setW] = useState<any>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -33,7 +34,7 @@ export default function OrgView() {
         </div>
       </div>
 
-      <WhatIf onResult={setW} />
+      <WhatIf onResult={setW} onShowGraph={onShowGraph} />
       {err && <p className="a-note">{err}</p>}
       <p className="trace" style={{ marginBottom: "0.8rem" }}>
         {counts.healthy ?? 0} healthy, {counts.drifting ?? 0} drifting, {counts.orphaned ?? 0} orphaned, out of {areas.length} modules with commit data.

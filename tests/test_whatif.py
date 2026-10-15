@@ -45,3 +45,16 @@ async def test_graph_stats_reports_memory(db, g):
     await rw(g, FIX)
     stats = {s["graph"]: s for s in await graph_stats(db)}
     assert g.name in stats and stats[g.name]["mb"] >= 0
+
+
+async def test_departure_lists_affected_modules_with_successors_and_draws_a_graph(db, g):
+    await ensure_company_schema(g)
+    await rw(g, FIX)
+    w = await departure_impact(db, "person:erin", base=g.name)
+    xml = next(a for a in w["areas"] if a["id"] == "area:xml")
+    assert xml["name"] == "xml" and xml["state"] == "orphaned"
+    assert xml["successors"][0] == {"id": "person:a", "name": "a", "basis": "collaboration", "commits": None}
+    would = {n["id"]: n["props"].get("would") for n in w["fragment"]["nodes"]}
+    assert would["person:erin"] == "leave" and would["area:xml"] == "orphaned" and would["person:a"] == "step_in"
+    edges = {(e["src"], e["type"], e["dst"]) for e in w["fragment"]["edges"]}
+    assert ("person:erin", "EXPERT_IN", "area:xml") in edges and ("person:a", "STEP_IN", "area:xml") in edges
