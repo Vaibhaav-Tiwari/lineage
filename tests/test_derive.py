@@ -7,7 +7,7 @@ async def test_collaboration_weights_sum_and_store_once(g):
     await ensure_company_schema(g)
     await rw(g, """
     CREATE (a:Person {id:'person:a'}), (b:Person {id:'person:b'}), (c:Person {id:'person:c'}),
-           (p:PEP {id:'pep:1'}), (t1:Thread {id:'thread:1'}), (t2:Thread {id:'thread:2'}),
+           (p:PEP {id:'pep:1', number:1, title:'PEP 1'}), (t1:Thread {id:'thread:1'}), (t2:Thread {id:'thread:2'}),
            (a)-[:AUTHORED]->(p), (b)-[:AUTHORED]->(p),
            (a)-[:POSTED]->(:Post {id:'post:1'})-[:IN]->(t1), (b)-[:POSTED]->(:Post {id:'post:2'})-[:IN]->(t1),
            (a)-[:POSTED]->(:Post {id:'post:3'})-[:IN]->(t2), (b)-[:POSTED]->(:Post {id:'post:4'})-[:IN]->(t2),
@@ -23,8 +23,8 @@ async def test_concerns_from_title_or_repeated_mentions(g):
     await ensure_company_schema(g)
     await rw(g, """
     CREATE (:Area {id:'area:asyncio', name:'asyncio'}), (:Area {id:'area:enum', name:'enum'}), (:Area {id:'area:re', name:'re'}),
-           (p1:PEP {id:'pep:1', title:'Async generators in asyncio'}),
-           (p2:PEP {id:'pep:2', title:'Something else'}),
+           (p1:PEP {id:'pep:1', title:'Async generators in asyncio', number:1}),
+           (p2:PEP {id:'pep:2', title:'Something else', number:2}),
            (:Chunk {id:'c1', text:'The enum module gets enum members.'})-[:PART_OF]->(p2),
            (:Chunk {id:'c2', text:'A single enum mention.'})-[:PART_OF]->(p1),
            (:Chunk {id:'c3', text:'re re re re'})-[:PART_OF]->(p1)
@@ -37,7 +37,7 @@ async def test_concerns_from_title_or_repeated_mentions(g):
 async def test_pagerank_stored_on_peps(g):
     await ensure_company_schema(g)
     await rw(g, """
-    CREATE (a:PEP {id:'pep:1'}), (b:PEP {id:'pep:2'}), (c:PEP {id:'pep:3'}), (d:PEP {id:'pep:4'}),
+    CREATE (a:PEP {id:'pep:1', number:1, title:'PEP 1'}), (b:PEP {id:'pep:2', number:2, title:'PEP 2'}), (c:PEP {id:'pep:3', number:3, title:'PEP 3'}), (d:PEP {id:'pep:4', number:4, title:'PEP 4'}),
            (a)-[:REFERENCES]->(d), (b)-[:REFERENCES]->(d), (c)-[:REFERENCES]->(d), (a)-[:REFERENCES]->(b)
     """)
     await compute_pagerank(g)
@@ -50,7 +50,7 @@ async def test_generic_interest_areas_link_only_via_title(g):
     await ensure_company_schema(g)
     await rw(g, """
     CREATE (:Area {id:'area:performance', name:'performance', kind:'interest'}), (:Area {id:'area:typing', name:'typing', kind:'module'}),
-           (p:PEP {id:'pep:1', title:'Annotations'}), (q:PEP {id:'pep:2', title:'Performance improvements'}),
+           (p:PEP {id:'pep:1', title:'Annotations', number:1}), (q:PEP {id:'pep:2', title:'Performance improvements', number:2}),
            (:Chunk {id:'c1', text:'performance performance performance typing typing'})-[:PART_OF]->(p)
     """)
     await derive_concerns(g)

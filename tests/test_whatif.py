@@ -13,7 +13,7 @@ CREATE (xml:Area {id:'area:xml', name:'xml'}), (js:Area {id:'area:json', name:'j
        (a)-[:EXPERT_IN {inactive:false}]->(js), (b)-[:COMMITTED_TO {count:4}]->(js),
        (a)-[:COLLABORATED {weight:3}]->(b), (c)-[:COLLABORATED {weight:2}]->(d),
        (a)-[:COLLABORATED {weight:5}]->(erin), (erin)-[:COLLABORATED {weight:1}]->(c),
-       (erin)-[:AUTHORED]->(:PEP {id:'pep:1', number:1})
+       (erin)-[:AUTHORED]->(:PEP {id:'pep:1', number:1, title:'PEP 1'})
 """
 
 

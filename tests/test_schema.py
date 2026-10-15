@@ -37,9 +37,9 @@ async def test_company_schema_is_idempotent_and_complete(g):
 
 async def test_unique_id_rejects_duplicates(g):
     await ensure_company_schema(g)
-    await rw(g, "CREATE (:PEP {id:'pep:1'})")
+    await rw(g, "CREATE (:PEP {id:'pep:1', number:1, title:'PEP 1'})")
     with pytest.raises(Exception, match="(?i)unique constraint"):
-        await rw(g, "CREATE (:PEP {id:'pep:1'})")
+        await rw(g, "CREATE (:PEP {id:'pep:1', number:1, title:'PEP 1'})")
 
 
 async def test_agent_schema(g):
@@ -58,3 +58,28 @@ async def test_user_and_shared_schema(g):
     assert "RANGE" in idx[("Interest", "area_ref")]
     assert "RANGE" in idx[("FixTask", "id")]
     assert "RANGE" in idx[("Agent", "name")]
+
+
+async def test_the_database_itself_refuses_malformed_or_duplicate_records(db):
+    import uuid
+
+    tag = uuid.uuid4().hex[:6]
+    company, agent, shared = (db.select_graph(f"test{tag}:{n}") for n in ("company", "agent", "shared"))
+    try:
+        await ensure_company_schema(company)
+        await ensure_agent_schema(agent)
+        await ensure_shared_schema(shared)
+        with pytest.raises(Exception, match="(?i)mandatory"):
+            await company.query("CREATE (:PEP {id:'pep:1', title:'no number'})")
+        with pytest.raises(Exception, match="(?i)mandatory"):
+            await company.query("CREATE (:Decision {id:'decision:x'})")
+        await agent.query("CREATE (:Answer {id:'answer:1', text:'a'})")
+        with pytest.raises(Exception, match="(?i)unique"):
+            await agent.query("CREATE (:Answer {id:'answer:1', text:'b'})")
+        await shared.query("CREATE (:FaqEntry {id:'faq:1'})")
+        with pytest.raises(Exception, match="(?i)unique"):
+            await shared.query("CREATE (:FaqEntry {id:'faq:1'})")
+    finally:
+        for g in (company, agent, shared):
+            if g.name in await db.list_graphs():
+                await g.delete()

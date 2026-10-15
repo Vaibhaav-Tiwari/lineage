@@ -5,7 +5,7 @@ from lineage.schema import ensure_agent_schema, ensure_company_schema
 
 COMPANY = """
 CREATE (p101:PEP {id:'pep:101', number:101, title:'Old'}), (p102:PEP {id:'pep:102', number:102, title:'New'}),
-       (p103:PEP {id:'pep:103', number:103}), (p104:PEP {id:'pep:104', number:104}), (p105:PEP {id:'pep:105', number:105}),
+       (p103:PEP {id:'pep:103', number:103, title:'PEP 103'}), (p104:PEP {id:'pep:104', number:104, title:'PEP 104'}), (p105:PEP {id:'pep:105', number:105, title:'PEP 105'}),
        (p102)-[:SUPERSEDES]->(p101), (p103)-[:REFERENCES]->(p101), (p104)-[:REFERENCES]->(p103),
        (p102)-[:REFERENCES]->(p101), (p105)-[:REQUIRES]->(p104),
        (:Chunk {id:'c1'})-[:PART_OF]->(p101), (:Chunk {id:'c2'})-[:PART_OF]->(p101), (:Chunk {id:'c3'})-[:PART_OF]->(p103)
