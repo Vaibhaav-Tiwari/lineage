@@ -12,7 +12,7 @@ from datetime import date
 
 from lineage.db import ro
 from lineage.graph import queries as Q
-from lineage.graph.tools import ownership_known
+from lineage.graph.tools import HISTORY_START, ownership_known
 
 _PEP = re.compile(r"\bPEP[\s-]*(\d{1,4})\b", re.I)
 _LATER = "The dial hides anything later than the date you picked."
@@ -65,8 +65,8 @@ async def explain_miss(g, question: str, as_of: date | None, error: str | None =
                     "actions": _today(as_of) + [{"label": f"Move the dial to {first['created']}", "as_of": first["created"]}]}
         if not ownership_known(as_of):
             return {"kind": "unrecorded",
-                    "text": f"Who works on {name} is only recorded for the last 12 months (the Experts Index and "
-                            f"recent commits), so it can't be answered as of {day}. {_LATER}",
+                    "text": f"Commit history is only held from {HISTORY_START.year}, so who worked on {name} "
+                            f"can't be answered as of {day}. {_LATER}",
                     "actions": _today(as_of)}
         return {"kind": "unrecorded",
                 "text": f"The graph knows {name}, but nothing recorded answers this exact question. "

@@ -53,9 +53,9 @@ export const api = {
   execute: (id: string) => call<any>(`/actions/${id}/execute`, { method: "POST" }),
   fixtasks: () => call<any[]>("/fixtasks"),
   faq: () => call<any[]>("/faq"),
-  health: () => call<any[]>("/org/health"),
-  introduce: (person_id: string, area_id: string) =>
-    call<any>("/org/introduce", { method: "POST", body: JSON.stringify({ person_id, area_id }) }),
+  health: (asOf?: string | null) => call<any[]>(`/org/health${asOf ? `?as_of=${asOf}` : ""}`),
+  introduce: (person_id: string, area_id: string, as_of: string | null = null) =>
+    call<any>("/org/introduce", { method: "POST", body: JSON.stringify({ person_id, area_id, as_of }) }),
   security: () => call<any[]>("/ops/security"),
   claim: (agent: string) => call<any>("/fixtasks/claim", { method: "POST", body: JSON.stringify({ agent }) }),
   drift: () => call<any[]>("/org/drift"),
@@ -64,7 +64,7 @@ export const api = {
   whatif: (person_ids: string[]) => call<any>("/org/whatif", { method: "POST", body: JSON.stringify({ person_ids }) }),
   preview: (pep: number) => call<any>("/org/preview", { method: "POST", body: JSON.stringify({ pep }) }),
   peps: (q: string) => call<any[]>(`/org/peps?q=${encodeURIComponent(q)}`),
-  beliefs: () => call<any[]>("/beliefs?agent=historian"),
+  beliefs: (knownAt?: string) => call<any[]>(`/beliefs?agent=historian${knownAt ? `&known_at=${encodeURIComponent(knownAt)}` : ""}`),
   interests: (uid: string) => call<any[]>(`/users/${uid}/interests`),
   why: (uid: string, area: string) => call<Fragment>(`/users/${uid}/interests/${encodeURIComponent(area)}/why`),
   forget: (uid: string, eid: string) => call<any>(`/users/${uid}/episodes/${encodeURIComponent(eid)}`, { method: "DELETE" }),

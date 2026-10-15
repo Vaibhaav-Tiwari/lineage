@@ -100,14 +100,19 @@ class GraphOnlyLLM:
         listed = [e for e in experts if e.get("declared") and not e.get("revealed")]
         fn = _Footnotes()
         parts = []
+        then = session.union.meta.get("as_of")  # a past date: answered from the commit history
+        period = f"in the year before {then}" if then else "in the last 12 months"
         if active:
-            parts.append("Actually committing in the last 12 months: " +
+            parts.append(f"Actually committing {period}: " +
                          ", ".join(f"{e['name']} ({e.get('commits', 0)} commit{'' if e.get('commits') == 1 else 's'}){fn.mark(e['id'])}"
                                    for e in active[:5]) + ".")
         if listed:
             parts.append("Listed as experts but not recently committing: " + ", ".join(f"{e['name']}{fn.mark(e['id'])}" for e in listed[:5]) + ".")
         area = session.union.meta.get("area", {})
-        session.submitted = {"text": f"For {area.get('name')}: " + " ".join(parts), "citations": fn.ids, "beliefs": []}
+        note = " The listed owners are only known for today." if then else ""
+        beliefs = [{"text": f"{active[0]['name']} is doing the most work on {area.get('name')}" + (f" (as of {then})" if then else ""),
+                    "evidence": [active[0]["id"]], "confidence": 0.8}] if active else []
+        session.submitted = {"text": f"For {area.get('name')}: " + " ".join(parts) + note, "citations": fn.ids, "beliefs": beliefs}
         return True
 
     async def run_session(self, system: str, prompt: str, session, tool_specs) -> dict:
@@ -140,7 +145,9 @@ class GraphOnlyLLM:
             elif e["type"] == "AUTHORED" and d["id"] == f"pep:{pep}":
                 lines.append(f"Author: {s['props'].get('name') or s['props'].get('github')}.{fn.mark(s['id'])}")
         text = " ".join(dict.fromkeys(lines))
-        session.submitted = {"text": text.strip(), "citations": fn.ids, "beliefs": []}
+        # record what it concluded, tied to its evidence, so the Steward can un-learn it if the proposal changes
+        beliefs = [{"text": head, "evidence": [f"pep:{pep}"], "confidence": 0.9}]
+        session.submitted = {"text": text.strip(), "citations": fn.ids, "beliefs": beliefs}
         return {"backend": "graph-only"}
 
 

@@ -93,5 +93,5 @@ async def introduction(g, person_id: str, area_id: str, as_of: date | None = Non
     nodes.append({"id": area_id, "label": "Area", "props": {"name": health[0]["area"]}})
     edges = [{"src": a["id"], "dst": b["id"], "type": "TIE", "props": {"weight": w}}
              for a, b, w in zip(people, people[1:], weights)]
-    edges.append({"src": to["id"], "dst": area_id, "type": "COMMITTED_TO", "props": {}})
+    edges.append({"src": to["id"], "dst": area_id, "type": "WORKED_ON", "props": {}})
     return {"to": to, "path": people, "weights": weights, "area": area_id, "fragment": {"nodes": nodes, "edges": edges}}

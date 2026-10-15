@@ -1,0 +1,3 @@
+# Extra CPython paths that held a module's code before it moved (history follows file paths).
+pathlib: [Lib/pathlib.py]
+datetime: [Lib/datetime.py]

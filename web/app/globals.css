@@ -465,3 +465,7 @@ sup.fn button:hover { text-decoration: underline; }
 .intro-result .meta { font-size: var(--step--1); color: var(--ink-soft); }
 .how-link { text-decoration: underline dotted; text-underline-offset: 3px; cursor: help; }
 .tile-plain.truck { color: var(--ink); }
+
+.known-at { display: flex; gap: 0.6rem; align-items: baseline; margin: 0 0 0.7rem; font-size: var(--step--1); color: var(--ink-soft); }
+.known-at select { padding: 0.3rem 0.4rem; border: 1px solid var(--rule); background: var(--card); font: inherit; color: var(--ink); max-width: 100%; }
+.asof-note { margin: 0 0 1rem; padding: 0.5rem 0.75rem; border-left: 3px solid var(--brass); background: var(--card); font-size: var(--step--1); color: var(--ink-soft); }

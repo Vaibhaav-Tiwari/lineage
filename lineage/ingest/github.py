@@ -38,6 +38,19 @@ async def load_revealed(g, rows: list[dict], resolver) -> None:
     await write_batch(g, Q.UPSERT_COMMITTED, out)
 
 
+def slim_commits(commits: list[dict]) -> list[dict]:
+    """Keep only what the product uses (sha, author login, date): no names, emails or messages in the repo."""
+    return [{"sha": c.get("sha"), "author": {"login": (c.get("author") or {}).get("login")} if c.get("author") else None,
+             "commit": {"author": {"date": c["commit"]["author"]["date"]}}} for c in commits]
+
+
+async def load_worked_on(g, rows: list[dict], resolver) -> None:
+    """Full commit history per person and module (WORKED_ON), so ownership can be asked as of any date."""
+    out = [{"area_id": ids.area(r["area"]), "area": r["area"], "github": r["github"], "dates": r["dates"],
+            "person_id": resolver.resolve(github=r["github"])} for r in rows]
+    await write_batch(g, Q.UPSERT_WORKED_ON, out)
+
+
 async def load_prs(g, items: list[dict], resolver) -> None:
     rows = []
     for it in items:
@@ -76,4 +89,35 @@ async def fetch_github_names(handles, data_dir: Path, headers: dict, offline: bo
         name = user_display_name(user)
         if name:
             out[h] = name
+    return out
+
+
+HISTORY_SINCE = "2015-01-01T00:00:00Z"
+
+
+async def fetch_history(areas: dict, extra: dict, data_dir: Path, headers: dict, offline: bool,
+                        since: str = HISTORY_SINCE, max_pages: int = 60) -> dict[str, list]:
+    """Every commit since `since` that touched each module's paths (cached per page), for ownership over time."""
+    from lineage.ingest.cache import fetch_cached
+
+    out: dict[str, list] = {}
+    for area, paths in areas.items():
+        commits, seen = [], set()
+        for path in list(paths) + list(extra.get(area, [])):
+            for page in range(1, max_pages + 1):
+                key = f"hist-{area}-{path.replace('/', '_')}-{page}.json"
+                url = f"{API}/repos/python/cpython/commits?path={path}&since={since}&per_page=100&page={page}"
+                path_ = Path(data_dir) / "github" / "history" / key
+                raw = await fetch_cached(url, path_, headers=headers, offline=offline)
+                batch = json.loads(raw) if raw else []
+                if raw and b'"email"' in raw:  # cache only what we use
+                    batch = slim_commits(batch)
+                    path_.write_text(json.dumps(batch))
+                for c in batch:
+                    if c.get("sha") not in seen:  # a commit can touch two paths of one module
+                        seen.add(c.get("sha"))
+                        commits.append({"author": c.get("author"), "commit": {"author": {"date": c["commit"]["author"]["date"]}}})
+                if len(batch) < 100:
+                    break
+        out[area] = commits
     return out

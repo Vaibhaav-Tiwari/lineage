@@ -409,7 +409,7 @@ export default function Workspace() {
           </aside>
         </main>
       )}
-      {view === "org" && <OrgView onShowGraph={showPreview} />}
+      {view === "org" && <OrgView onShowGraph={showPreview} asOf={asOf} />}
       {view === "memory" && <MemoryView uid={UID} />}
 
       <footer className="strip">

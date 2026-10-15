@@ -8,6 +8,10 @@ from lineage.db import get_db
 @pytest.fixture
 async def db():
     conn = await get_db()
+    # the JavaScript UDFs are server-wide and some queries call them; load the current version first
+    from lineage.graph.udf import ensure_udfs
+
+    await ensure_udfs(conn)
     yield conn
     await conn.aclose()
 

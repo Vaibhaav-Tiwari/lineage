@@ -130,10 +130,15 @@ async def pep_timeline(g, pep: int, as_of: date | None = None) -> Fragment:
     return f
 
 
-OWNERSHIP_WINDOW_DAYS = 365  # Experts Index is today's; commits cover the last 12 months
+OWNERSHIP_WINDOW_DAYS = 365   # "who works on X" = who committed in the year before the date asked about
+HISTORY_START = date(2015, 1, 1)  # commit history is held from here (lineage/ingest/github.py HISTORY_SINCE)
 
 
 def ownership_known(as_of: date | None) -> bool:
+    return as_of is None or as_of >= HISTORY_START + timedelta(days=OWNERSHIP_WINDOW_DAYS)
+
+
+def _recent(as_of: date | None) -> bool:
     return as_of is None or as_of >= date.today() - timedelta(days=OWNERSHIP_WINDOW_DAYS)
 
 
@@ -144,8 +149,10 @@ async def who_knows(g, topic: str, as_of: date | None = None) -> Fragment:
     area = found[0]
     if not ownership_known(as_of):  # don't present today's owners as if they were 2001's
         return Fragment(meta={"area": area, "experts": [], "summary":
-                              f"Who works on {area['name']} is only recorded for the last 12 months "
-                              f"(the Experts Index and recent commits), not as of {as_of.isoformat()}."})
+                              f"Commit history is only held from {HISTORY_START.year}, so who worked on {area['name']} "
+                              f"can't be answered as of {as_of.isoformat()}."})
+    if not _recent(as_of):
+        return await _who_knew(g, area, as_of)
     f = _fragment(await ro(g, Q.AREA_EXPERTS, {"id": area["id"]}), as_of)
     people: dict[str, dict] = {}
     for e in f.edges:
@@ -162,6 +169,24 @@ async def who_knows(g, topic: str, as_of: date | None = None) -> Fragment:
     experts.sort(key=lambda p: (p["revealed"], p.get("commits") or 0, p.get("last_at") or ""), reverse=True)
     f.meta = {"area": area, "experts": experts,
               "summary": f"Area {area['name']}: " + "; ".join(f"{p['name']} ({p['source']})" for p in experts)}
+    return f
+
+
+async def _who_knew(g, area: dict, as_of: date) -> Fragment:
+    """Who was committing to a module in the year before a past date, from the commit history (valid time).
+    The Experts Index has no history, so listed owners are only known for today."""
+    rows = await ro(g, Q.AREA_WORKED_AS_OF, {"id": area["id"], "until": as_of.isoformat(),
+                                             "since": (as_of - timedelta(days=OWNERSHIP_WINDOW_DAYS)).isoformat()})
+    f = Fragment(nodes=[{"id": area["id"], "label": "Area", "props": {"name": area["name"]}}])
+    experts = []
+    for r in rows:
+        f.nodes.append({"id": r["id"], "label": "Person", "props": {"name": r["name"], "github": r["github"]}})
+        f.edges.append({"src": r["id"], "dst": area["id"], "type": "WORKED_ON", "props": {"count": r["commits"], "last_at": r["last_at"]}})
+        experts.append({"id": r["id"], "name": r["name"], "declared": False, "revealed": True, "source": "revealed",
+                        "commits": r["commits"], "last_at": r["last_at"]})
+    f.meta = {"area": area, "experts": experts, "as_of": as_of.isoformat(),
+              "summary": f"Area {area['name']} as of {as_of.isoformat()}, from commit history (the listed owners are only "
+                         f"known for today): " + "; ".join(f"{e['name']} ({e['commits']} commits)" for e in experts[:8])}
     return f
 
 

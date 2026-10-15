@@ -2,6 +2,7 @@
 
 lineage.recency(dates, asOf, halfLifeDays)  each commit counts 0.5^(age / half-life); later than asOf counts 0
 lineage.in_window(dates, from, to)          how many commits fall in [from, to]
+lineage.last_before(dates, to)              the latest date not after `to` (or null)
 
 UDFs are global to the server, so the admin connection (re)loads them at start-up.
 """
@@ -24,7 +25,14 @@ function in_window(dates, from, to) {
   for (var i = 0; i < dates.length; i++) { var d = Date.parse(dates[i]); if (d >= a && d <= b) n++; }
   return n;
 }
+function last_before(dates, to) {
+  if (!dates) return null;
+  var b = Date.parse(to), best = null;
+  for (var i = 0; i < dates.length; i++) { if (Date.parse(dates[i]) <= b && (best === null || dates[i] > best)) best = dates[i]; }
+  return best;
+}
 falkor.register('recency', recency);
+falkor.register('last_before', last_before);
 falkor.register('in_window', in_window);
 """
 

@@ -67,7 +67,8 @@ async def test_a_backend_failure_says_it_is_not_the_question(g):
 
 async def test_ownership_before_the_snapshot_window_is_explained(g):
     await _seed(g)
-    m = await explain_miss(g, "Who should I ask about asyncio?", as_of=date(2020, 1, 1))
+    await rw(g, "CREATE (:PEP {id:'pep:3333', number:3333, title:'asyncio tweaks', status:'Final', created: date('2010-01-01')})")
+    m = await explain_miss(g, "Who should I ask about asyncio?", as_of=date(2012, 1, 1))
     assert m["kind"] == "unrecorded"
-    assert "last 12 months" in m["text"] and "2020-01-01" in m["text"]
+    assert "2015" in m["text"] and "2012-01-01" in m["text"]
     assert {"label": "Ask as of today", "as_of": None} in m["actions"]

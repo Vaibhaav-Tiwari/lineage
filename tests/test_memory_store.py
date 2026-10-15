@@ -61,3 +61,21 @@ async def test_user_memory_weights_explain_and_provable_forget(g):
     await forget_episode(g, e2)
     assert await ro(g, "MATCH (i:Interest) RETURN count(i) AS c") == [{"c": 0}]
     assert await ro(g, "MATCH (e:Episode) RETURN count(e) AS c") == [{"c": 0}]
+
+
+
+async def test_beliefs_as_known_at_an_earlier_moment(g):
+    from lineage.db import rw
+    from lineage.graph.ripple import agent_fanout
+
+    await ensure_agent_schema(g)
+    await record_answer(g, "q", "a", ["pep:563"], [{"text": "563 is the plan", "evidence": ["pep:563"], "confidence": 0.9}], None)
+    created = (await list_beliefs(g))[0]["created_at"]
+    await agent_fanout(g, ["pep:563"], "replaced by PEP 649")
+    assert (await ro(g, "MATCH (b:Belief) RETURN b.stale_at IS NOT NULL AS s")) == [{"s": True}]
+    await rw(g, "MATCH (b:Belief) SET b.stale_at = '2999-01-01T00:00:00+00:00'")  # learned well after it was recorded
+    then = await list_beliefs(g, known_at=created)
+    assert [(b["text"], b["status"], b["stale_because"]) for b in then] == [("563 is the plan", "committed", None)]
+    later = await list_beliefs(g, known_at="2999-06-01T00:00:00+00:00")
+    assert later[0]["status"] == "stale" and later[0]["stale_because"] == "replaced by PEP 649"
+    assert await list_beliefs(g, known_at="2000-01-01T00:00:00+00:00") == []

@@ -45,7 +45,11 @@ async def propose_action(ag, kind: str, payload: dict, derived_from: list[str]) 
     return xid
 
 
-async def list_beliefs(ag, status: str | None = None) -> list[dict]:
+async def list_beliefs(ag, status: str | None = None, known_at: str | None = None) -> list[dict]:
+    """Beliefs now, or as they were recorded at an earlier moment (record time: what the agent believed then)."""
+    if known_at:
+        rows = await ro(ag, Q.LIST_BELIEFS_KNOWN_AT, {"at": known_at})
+        return [r for r in rows if status is None or r["status"] == status]
     return await ro(ag, Q.LIST_BELIEFS, {"status": status})
 
 

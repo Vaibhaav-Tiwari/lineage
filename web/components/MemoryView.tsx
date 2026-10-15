@@ -16,6 +16,8 @@ type Pending = { area: string; eid: string; question: string; left: number };
 export default function MemoryView({ uid }: { uid: string }) {
   const [beliefs, setBeliefs] = useState<any[]>([]);
   const [faq, setFaq] = useState<any[]>([]);
+  const [moments, setMoments] = useState<string[]>([]); // when Lineage learned that something changed
+  const [knownAt, setKnownAt] = useState<string>("");
   const [checks, setChecks] = useState<any[] | null>(null);
   const [interests, setInterests] = useState<any[]>([]);
   const [why, setWhy] = useState<Record<string, any[]>>({});
@@ -25,7 +27,9 @@ export default function MemoryView({ uid }: { uid: string }) {
   pendingRef.current = pending;
 
   async function load() {
-    setBeliefs(await api.beliefs().catch(() => []));
+    const now = await api.beliefs().catch(() => []);
+    setMoments([...new Set<string>(now.map((b: any) => b.stale_at).filter(Boolean))].sort().reverse());
+    setBeliefs(knownAt ? await api.beliefs(knownAt).catch(() => []) : now);
     setFaq(await api.faq().catch(() => []));
     api.security().then(setChecks).catch(() => setChecks([]));
     const ints = await api.interests(uid).catch(() => []);
@@ -34,7 +38,10 @@ export default function MemoryView({ uid }: { uid: string }) {
     for (const i of ints) w[i.area] = (await api.why(uid, i.area)).nodes.filter((n) => n.label === "Episode");
     setWhy(w);
   }
-  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [knownAt]);
+  // one second before the moment it learned of a change: what it believed just before
+  const before = (iso: string) => new Date(new Date(iso).getTime() - 1000).toISOString().replace(".000Z", "+00:00");
+  const fmt = (iso: string) => new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 
   async function commit(p: Pending) {
     await api.forget(uid, p.eid);
@@ -68,6 +75,17 @@ export default function MemoryView({ uid }: { uid: string }) {
       <section>
         <h2>What the Historian believes</h2>
         <p className="sub">Each belief rests on evidence in the archive. When that evidence changes, the belief is marked stale instead of quietly lingering.</p>
+        {moments.length > 0 && (
+          <label className="known-at">
+            <Tip text="Record time: Lineage keeps when it learned each belief no longer held, so you can see what the agent believed at any earlier moment, separately from what was true then (the time dial).">
+              <span tabIndex={0}>What it believed</span>
+            </Tip>
+            <select value={knownAt} onChange={(e) => setKnownAt(e.target.value)}>
+              <option value="">now</option>
+              {moments.map((m) => <option key={m} value={before(m)}>just before it learned of a change ({fmt(m)})</option>)}
+            </select>
+          </label>
+        )}
         {beliefs.length === 0 && <p className="working">No beliefs yet. Ask something first.</p>}
         {beliefs.map((b) => (
           <div key={b.id} className={`belief ${b.status}`}>

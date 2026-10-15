@@ -114,12 +114,24 @@ async def test_status_as_of_with_real_event_payload_shape(g):
     assert "status Accepted" in f.meta["summary"]
 
 
-async def test_who_knows_refuses_dates_before_the_ownership_snapshot(g):
+async def test_who_knows_refuses_dates_before_the_commit_history_we_hold(g):
     from datetime import timedelta
 
     await _setup(g)
     old = await who_knows(g, "argparse", as_of=date(2001, 7, 14))
     assert old.meta["experts"] == [] and old.nodes == []
-    assert "last 12 months" in old.meta["summary"]
+    assert "2015" in old.meta["summary"]
     recent = await who_knows(g, "argparse", as_of=date.today() - timedelta(days=30))
     assert recent.meta["experts"]
+
+
+async def test_who_knows_in_the_past_uses_the_commit_history(g):
+    from lineage.db import rw
+
+    await _setup(g)
+    await rw(g, "MATCH (a:Area {id:'area:argparse'}) MERGE (o:Person {id:'person:olda', name:'Old A'}) "
+                "MERGE (o)-[:WORKED_ON {dates:['2018-03-01','2018-05-01','2018-07-01'], first_at:'2018-03-01', last_at:'2018-07-01'}]->(a)")
+    f = await who_knows(g, "argparse", as_of=date(2018, 12, 31))
+    assert [e["id"] for e in f.meta["experts"]] == ["person:olda"]
+    assert f.meta["experts"][0]["commits"] == 3 and f.meta["experts"][0]["last_at"] == "2018-07-01"
+    assert "listed owners are only known for today" in f.meta["summary"].lower()

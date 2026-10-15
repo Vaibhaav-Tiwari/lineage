@@ -28,14 +28,17 @@ async def company_ripple(g, changed_ids: list[str], reason: str, depth: int = 1)
 
 
 async def agent_fanout(ag, stale_refs: list[str], reason: str) -> dict:
+    from datetime import datetime, timezone
+
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     deps = await rw(ag, Q.DEPENDENTS_OF_EVIDENCE, {"refs": sorted(set(stale_refs)), "reason": reason})
     by = {"Belief": [], "Answer": [], "Action": []}
     for d in deps:
         by[d["label"]].append(d["id"])
     if by["Belief"]:
-        await rw(ag, Q.MARK_BELIEFS_STALE, {"ids": by["Belief"], "reason": reason})
+        await rw(ag, Q.MARK_BELIEFS_STALE, {"ids": by["Belief"], "reason": reason, "now": now})
     if by["Answer"]:
-        await rw(ag, Q.MARK_ANSWERS_STALE, {"ids": by["Answer"], "reason": reason})
+        await rw(ag, Q.MARK_ANSWERS_STALE, {"ids": by["Answer"], "reason": reason, "now": now})
     blocked = []
     if by["Action"]:
         blocked = [r["id"] for r in await rw(ag, Q.BLOCK_ACTIONS, {"ids": by["Action"], "reason": f"stale lineage: {reason}"})]

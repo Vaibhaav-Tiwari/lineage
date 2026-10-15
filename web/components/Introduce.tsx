@@ -8,8 +8,9 @@ import Tip from "./Tip";
 
 /** "Who can introduce me?": a weighted shortest path (FalkorDB algo.SPpaths) through the strongest working
  *  ties, from a person to whoever now holds the most recent knowledge of a module. */
-export default function Introduce({ areas, onShowGraph }: {
+export default function Introduce({ areas, onShowGraph, asOf = null }: {
   areas: { area_id: string; area: string }[];
+  asOf?: string | null;
   onShowGraph: (f: Fragment, title: string, focus: string | null) => void;
 }) {
   const [who, setWho] = useState<any>(null);
@@ -21,7 +22,7 @@ export default function Introduce({ areas, onShowGraph }: {
   async function run(person: any, areaId: string) {
     if (!person || !areaId) return;
     setBusy(true); setRes(null);
-    try { setRes(await api.introduce(person.id, areaId)); } finally { setBusy(false); }
+    try { setRes(await api.introduce(person.id, areaId, asOf)); } finally { setBusy(false); }
   }
   const areaName = areas.find((a) => a.area_id === area)?.area ?? "";
 
@@ -50,7 +51,7 @@ export default function Introduce({ areas, onShowGraph }: {
             </p>
             <p className="meta">
               {res.path.length === 2 ? `${who?.name} has worked directly with ${res.to.name}` : `${res.path.length - 2} introduction${res.path.length === 3 ? "" : "s"} away`},
-              {" "}who holds {Math.round(res.to.share * 100)}% of the recent work on {areaName}.{" "}
+              {" "}who holds {Math.round(res.to.share * 100)}% of the recent work on {areaName}{asOf ? ` as of ${asOf}` : ""}.{" "}
               <Tip text="Weighted shortest path (algo.SPpaths) over two-way collaboration ties; a tie's cost is 1 / how often they worked together, so the route prefers strong working relationships over a short chain of weak ones.">
                 <span className="how-link" tabIndex={0}>How is this found?</span>
               </Tip>

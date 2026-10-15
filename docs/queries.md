@@ -536,13 +536,26 @@ CREATE (bl:Belief {id: b.id, text: b.text, status: b.status, confidence: b.confi
 MERGE (a)-[:DERIVED_FROM]->(bl)
 ```
 
+### `LIST_BELIEFS_KNOWN_AT`
+
+What the agent believed as recorded at a moment (record time), not as of today.
+
+```cypher
+MATCH (b:Belief) WHERE b.created_at <= $at
+WITH b, b.stale_at IS NOT NULL AND b.stale_at <= $at AS was_stale
+RETURN b.id AS id, b.text AS text, CASE WHEN was_stale THEN 'stale' ELSE coalesce(b.prev_status, b.status) END AS status,
+       b.confidence AS confidence, was_stale AS stale, CASE WHEN was_stale THEN b.stale_because ELSE null END AS stale_because,
+       b.created_at AS created_at, b.stale_at AS stale_at
+ORDER BY b.created_at
+```
+
 ### `LIST_BELIEFS`
 
 ```cypher
 MATCH (b:Belief)
 WHERE $status IS NULL OR b.status = $status
 RETURN b.id AS id, b.text AS text, b.status AS status, b.confidence AS confidence,
-       b.stale AS stale, b.stale_because AS stale_because, b.created_at AS created_at
+       b.stale AS stale, b.stale_because AS stale_because, b.created_at AS created_at, b.stale_at AS stale_at
 ORDER BY b.created_at
 ```
 
@@ -693,15 +706,17 @@ RETURN DISTINCT x.id AS id, labels(x)[0] AS label, x.status AS status
 
 ### `MARK_BELIEFS_STALE`
 
+stale_at is record time: when Lineage learned the belief no longer holds (beliefs "as known at" a moment)
+
 ```cypher
 MATCH (b:Belief) WHERE b.id IN $ids AND b.status <> 'stale'
-SET b.prev_status = b.status, b.status = 'stale', b.stale = true, b.stale_because = $reason
+SET b.prev_status = b.status, b.status = 'stale', b.stale = true, b.stale_because = $reason, b.stale_at = $now
 ```
 
 ### `MARK_ANSWERS_STALE`
 
 ```cypher
-MATCH (a:Answer) WHERE a.id IN $ids SET a.stale = true, a.stale_because = $reason
+MATCH (a:Answer) WHERE a.id IN $ids SET a.stale = true, a.stale_because = $reason, a.stale_at = $now
 ```
 
 ### `BLOCK_ACTIONS`
@@ -718,7 +733,7 @@ Undo of a change event inside an agent graph: put beliefs/actions back as they w
 
 ```cypher
 MATCH (b:Belief) WHERE b.prev_status IS NOT NULL
-SET b.status = b.prev_status, b.prev_status = null, b.stale = false, b.stale_because = null
+SET b.status = b.prev_status, b.prev_status = null, b.stale = false, b.stale_because = null, b.stale_at = null
 ```
 
 ### `RESTORE_ACTIONS`
@@ -1308,8 +1323,8 @@ RETURN n.id AS id, coalesce(n.stale, false) OR coalesce(n.status, '') = 'stale' 
 lineage.recency is a JavaScript UDF (lineage/graph/udf.py): each commit counts 0.5^(age / half-life).
 
 ```cypher
-MATCH (p:Person)-[c:COMMITTED_TO]->(a:Area)
-WHERE c.dates IS NOT NULL AND ($areas IS NULL OR a.id IN $areas)
+MATCH (p:Person)-[c:WORKED_ON]->(a:Area)
+WHERE $areas IS NULL OR a.id IN $areas
 RETURN a.id AS area_id, a.name AS area, p.id AS id, coalesce(p.name, p.github, p.id) AS name,
        lineage.recency(c.dates, $as_of, $half_life) AS score, lineage.in_window(c.dates, $since, $as_of) AS commits
 ```
@@ -1324,4 +1339,30 @@ CALL algo.SPpaths({sourceNode: a, targetNode: b, relTypes: ['TIE'], weightProp: 
 YIELD path, pathWeight
 RETURN [n IN nodes(path) | {id: n.id, name: coalesce(n.name, n.github, n.id)}] AS people,
        [r IN relationships(path) | r.weight] AS weights, pathWeight AS cost
+```
+
+### `UPSERT_WORKED_ON`
+
+Full commit history per person and module (valid time), so ownership can be asked as of any date.
+
+```cypher
+UNWIND $rows AS r
+MERGE (a:Area {id: r.area_id})
+ON CREATE SET a.name = r.area
+MERGE (p:Person {id: r.person_id})
+ON CREATE SET p.github = r.github
+MERGE (p)-[w:WORKED_ON]->(a)
+SET w.dates = r.dates, w.first_at = r.dates[0], w.last_at = r.dates[size(r.dates) - 1]
+```
+
+### `AREA_WORKED_AS_OF`
+
+Who was committing to a module in the year before a past date (the Experts Index has no history).
+
+```cypher
+MATCH (p:Person)-[w:WORKED_ON]->(a:Area {id: $id})
+WITH p, a, lineage.in_window(w.dates, $since, $until) AS n, lineage.last_before(w.dates, $until) AS last
+WHERE n > 0
+RETURN p.id AS id, coalesce(p.name, p.github, p.id) AS name, p.github AS github, a.id AS area_id, n AS commits, last AS last_at
+ORDER BY n DESC, last DESC
 ```

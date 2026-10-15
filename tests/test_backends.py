@@ -14,6 +14,8 @@ async def test_graph_only_answers_from_decision_path(db):
         assert {"pep:102", "person:bob"} <= set(r.citations)
         assert "Bob" in r.text
         assert await ro(ag, "MATCH (a:Answer) RETURN count(a) AS c") == [{"c": 1}]
+        # graph-only answers also record what they concluded, so memory and un-learning work without an LLM
+        assert [b["evidence"] for b in r.beliefs] == [["pep:102"]] and "PEP 102" in r.beliefs[0]["text"]
     finally:
         await _cleanup(cg, ag, ug)
 
@@ -128,5 +130,21 @@ async def test_each_tool_step_records_what_it_found_for_the_replay(db):
         step = r.tool_trace[0]
         assert step["name"] == "decision_path" and "pep:102" in step["found"] and "person:bob" in step["found"]
         assert isinstance(step["summary"], str) and step["summary"]
+    finally:
+        await _cleanup(cg, ag, ug)
+
+
+async def test_graph_only_who_answer_names_the_period_when_asked_about_the_past(db):
+    from datetime import date
+
+    from lineage.db import rw
+
+    cg, ag, ug = await _graphs(db)
+    try:
+        await rw(cg, "MATCH (a:Area {id:'area:argparse'}) MERGE (o:Person {id:'person:olda', name:'Old A'}) "
+                     "MERGE (o)-[:WORKED_ON {dates:['2018-03-01','2018-05-01'], first_at:'2018-03-01', last_at:'2018-05-01'}]->(a)")
+        r = await ask("Who should I ask about argparse?", company_g=cg, agent_g=ag, user_g=None,
+                      llm=GraphOnlyLLM(), embedder=FakeEmbedder(), as_of=date(2018, 12, 31))
+        assert "Old A" in r.text and "year before 2018-12-31" in r.text and "last 12 months" not in r.text
     finally:
         await _cleanup(cg, ag, ug)

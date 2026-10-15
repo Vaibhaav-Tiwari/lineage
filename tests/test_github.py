@@ -61,3 +61,22 @@ def test_aggregate_commits_keeps_each_commit_date():
     alice = next(r for r in rows if r["github"] == "alice")
     assert len(alice["dates"]) == alice["count"] and alice["dates"] == sorted(alice["dates"])
     assert alice["dates"][-1] == alice["last_at"]
+
+
+async def test_worked_on_keeps_each_persons_full_commit_history(g):
+    from lineage.ingest.github import load_worked_on
+
+    await ensure_company_schema(g)
+    rows = aggregate_commits(json.loads((FIX / "gh_commits_sample.json").read_text()), "argparse")
+    await load_worked_on(g, rows, IdentityResolver({}))
+    out = await ro(g, "MATCH (:Person {id:'person:alice'})-[w:WORKED_ON]->(:Area {id:'area:argparse'}) "
+                      "RETURN size(w.dates) AS n, w.first_at AS f, w.last_at AS l")
+    assert out[0]["n"] == 3 and out[0]["l"] == "2026-06-15" and out[0]["f"] <= out[0]["l"]
+
+
+def test_slim_commits_keeps_only_what_the_product_uses():
+    from lineage.ingest.github import slim_commits
+
+    raw = [{"sha": "a1", "author": {"login": "Alice", "avatar_url": "x"},
+            "commit": {"author": {"name": "Alice", "email": "alice@example.com", "date": "2026-06-15T10:00:00Z"}, "message": "m"}}]
+    assert slim_commits(raw) == [{"sha": "a1", "author": {"login": "Alice"}, "commit": {"author": {"date": "2026-06-15T10:00:00Z"}}}]

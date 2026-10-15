@@ -7,7 +7,10 @@ import Tip from "./Tip";
 import Introduce from "./Introduce";
 import WhatIf from "./WhatIf";
 
-export default function OrgView({ onShowGraph }: { onShowGraph: (f: Fragment, title: string, focus: string | null) => void }) {
+export default function OrgView({ onShowGraph, asOf = null }: {
+  onShowGraph: (f: Fragment, title: string, focus: string | null) => void;
+  asOf?: string | null;
+}) {
   const [areas, setAreas] = useState<any[]>([]);
   const [w, setW] = useState<any>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -17,8 +20,10 @@ export default function OrgView({ onShowGraph }: { onShowGraph: (f: Fragment, ti
   useEffect(() => {
     api.drift().then(setAreas).catch(() => setErr("Could not reach the API."));
     api.clusters().then(setClusters).catch(() => {});
-    api.health().then((rows) => setHealth(Object.fromEntries(rows.map((r) => [r.area_id, r])))).catch(() => {});
   }, []);
+  useEffect(() => {
+    api.health(asOf).then((rows) => setHealth(Object.fromEntries(rows.map((r) => [r.area_id, r])))).catch(() => {});
+  }, [asOf]);
   const lost = new Set<string>(w?.orphaned_areas ?? []);
   const risk = new Set<string>((w?.at_risk_areas ?? []).map((a: any) => a.area));
   const counts = areas.reduce((m: any, a) => ({ ...m, [a.status]: (m[a.status] ?? 0) + 1 }), {});
@@ -37,8 +42,14 @@ export default function OrgView({ onShowGraph }: { onShowGraph: (f: Fragment, ti
         </div>
       </div>
 
+      {asOf && (
+        <p className="asof-note">
+          Showing who did the work <strong>as of {asOf}</strong>, from the commit history held since 2015. The listed owners
+          and the drift status come from today&rsquo;s experts index, which has no history.
+        </p>
+      )}
       <WhatIf onResult={setW} onShowGraph={onShowGraph} />
-      <Introduce areas={areas} onShowGraph={onShowGraph} />
+      <Introduce areas={areas} onShowGraph={onShowGraph} asOf={asOf} />
       {err && <p className="a-note">{err}</p>}
       <p className="trace" style={{ marginBottom: "0.8rem" }}>
         {counts.healthy ?? 0} healthy, {counts.drifting ?? 0} drifting, {counts.orphaned ?? 0} orphaned, out of {areas.length} modules with commit data.

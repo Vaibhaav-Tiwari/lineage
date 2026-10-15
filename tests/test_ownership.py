@@ -39,9 +39,9 @@ async def test_default_scope_is_areas_with_commit_data(g):
 HEALTH = """
 CREATE (a:Area {id:'area:asyncio', name:'asyncio'}),
        (o:Person {id:'person:old', name:'Old Hand'}), (n:Person {id:'person:new', name:'New Hand'}), (b:Person {id:'person:bit', name:'Bit Part'}),
-       (o)-[:COMMITTED_TO {count:6, dates:['2025-11-01','2025-11-02','2025-11-03','2025-11-04','2025-11-05','2025-11-06']}]->(a),
-       (n)-[:COMMITTED_TO {count:3, dates:['2026-10-01','2026-10-02','2026-10-03']}]->(a),
-       (b)-[:COMMITTED_TO {count:1, dates:['2026-01-01']}]->(a)
+       (o)-[:WORKED_ON {dates:['2025-11-01','2025-11-02','2025-11-03','2025-11-04','2025-11-05','2025-11-06']}]->(a),
+       (n)-[:WORKED_ON {dates:['2026-10-01','2026-10-02','2026-10-03']}]->(a),
+       (b)-[:WORKED_ON {dates:['2026-01-01']}]->(a)
 """
 
 
@@ -63,7 +63,7 @@ TIES = """
 CREATE (x:Area {id:'area:x', name:'x'}),
        (a:Person {id:'person:a', name:'A'}), (b:Person {id:'person:b', name:'B'}), (c:Person {id:'person:c', name:'C'}),
        (d:Person {id:'person:d', name:'D'}),
-       (c)-[:COMMITTED_TO {count:4, dates:['2026-10-01','2026-10-02','2026-10-03','2026-10-04']}]->(x),
+       (c)-[:WORKED_ON {dates:['2026-10-01','2026-10-02','2026-10-03','2026-10-04']}]->(x),
        (a)-[:COLLABORATED {weight:5}]->(b), (b)-[:COLLABORATED {weight:5}]->(c),
        (a)-[:COLLABORATED {weight:1}]->(d), (d)-[:COLLABORATED {weight:1}]->(c)
 """
@@ -82,4 +82,18 @@ async def test_introduction_follows_the_strongest_working_ties_to_the_current_ow
     intro = await introduction(g, "person:a", "area:x", as_of=date(2026, 10, 16))
     assert intro["to"]["id"] == "person:c"
     assert [p["id"] for p in intro["path"]] == ["person:a", "person:b", "person:c"]  # strong ties, not the weak shortcut
-    assert {e["type"] for e in intro["fragment"]["edges"]} == {"TIE", "COMMITTED_TO"}
+    assert {e["type"] for e in intro["fragment"]["edges"]} == {"TIE", "WORKED_ON"}
+
+
+
+async def test_module_health_can_be_asked_as_of_an_earlier_date(db, g):
+    from datetime import date
+
+    from lineage.graph.ownership import module_health
+    from lineage.graph.udf import ensure_udfs
+
+    await ensure_udfs(db)
+    await rw(g, HEALTH)
+    then = (await module_health(g, as_of=date(2025, 12, 1)))[0]
+    assert [o["id"] for o in then["owners"]] == ["person:old"]  # nobody else had committed yet
+    assert then["owners"][0]["commits"] == 6

@@ -109,14 +109,17 @@ async def run_pipeline(g, data_dir: Path, config_dir: Path, offline: bool = Fals
     raw_peps = json.loads(await fetch_cached(PEPS_URL, data_dir / "peps.json", offline=offline))
     rows = parse_peps(raw_peps)
     experts = parse_experts((await fetch_cached(EXPERTS_URL, data_dir / "devguide" / "experts.rst", offline=offline) or b"").decode())
-    commits, pr_items = {}, []
+    commits, pr_items, history = {}, [], {}
     names: dict[str, str] = {}
     if not skip_github:
         headers, gh_offline = _gh_headers(offline, log)
         commits, pr_items = await _fetch_github(cfg, data_dir, raw_peps, headers, gh_offline)
+        history = await GH.fetch_history(_yaml(cfg / "areas.yaml", {}), _yaml(cfg / "areas_history.yaml", {}),
+                                         data_dir, headers, gh_offline)
         handles = [r["github"] for r in experts]
         handles += [(c.get("author") or {}).get("login") for cs in commits.values() for c in cs]
         handles += [(i.get("user") or {}).get("login") for i in pr_items]
+        handles += [(c.get("author") or {}).get("login") for cs in history.values() for c in cs]
         names = await GH.fetch_github_names(handles, data_dir, headers, gh_offline)
         log(f"github: display names for {len(names)} handles")
     resolver = IdentityResolver(_yaml(cfg / "aliases.yaml", {}), github_names=names)
@@ -173,6 +176,9 @@ async def run_pipeline(g, data_dir: Path, config_dir: Path, offline: bool = Fals
             await GH.load_revealed(g, GH.aggregate_commits(cs, area), resolver)
         await GH.load_prs(g, pr_items, resolver)
         log(f"github: {len(pr_items)} PEP-implementing PRs")
+        for area, cs in history.items():
+            await GH.load_worked_on(g, GH.aggregate_commits(cs, area), resolver)
+        log(f"github: commit history since {GH.HISTORY_SINCE[:4]} for {len(history)} modules")
 
     await load_people(g, resolver)
     log(f"people: {len(resolver.people())} resolved")

@@ -86,3 +86,13 @@ def test_a_fuller_name_replaces_a_first_name_only_display_name():
     pid = r.resolve(github="viicos")
     assert r.resolve(name="Victorien Plot") == pid
     assert r.people()[0]["name"] == "Victorien Plot"
+
+
+def test_seeding_with_known_people_keeps_their_ids_and_merges_new_handles():
+    r = IdentityResolver({}, github_names={"ambv": "Łukasz Langa", "newbie": "New Person"})
+    r.seed([{"id": "person:lukasz-langa", "name": "Łukasz Langa", "github": None, "discourse": "ambv"},
+            {"id": "person:vstinner", "name": "Victor Stinner", "github": "vstinner", "discourse": None}])
+    assert r.resolve(github="ambv") == "person:lukasz-langa"      # matched by public name
+    assert r.resolve(github="VStinner") == "person:vstinner"       # matched by handle
+    assert r.resolve(github="newbie") == "person:newbie"
+    assert r.new_people() == [{"id": "person:newbie", "name": "New Person", "github": "newbie", "discourse": None, "aliases": ["New Person"]}]

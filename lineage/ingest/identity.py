@@ -93,6 +93,24 @@ class IdentityResolver:
             self._by_discourse.setdefault(dsc, pid)
         return pid
 
+    def seed(self, people: list[dict]) -> None:
+        """Start from people already in the graph, keeping their ids (for incremental loads)."""
+        for p in people:
+            pid = p["id"]
+            self._people[pid] = {"id": pid, "name": p.get("name"), "github": p.get("github"),
+                                 "discourse": p.get("discourse"), "aliases": [p["name"]] if p.get("name") else []}
+            if p.get("github"):
+                self._by_github.setdefault(p["github"].lower(), pid)
+            if p.get("discourse"):
+                self._by_discourse.setdefault(p["discourse"].lower(), pid)
+            if p.get("name"):
+                self._by_name.setdefault(_norm(p["name"]), pid)
+        self._seeded = set(self._people)
+
+    def new_people(self) -> list[dict]:
+        """People first seen since seed()."""
+        return [p for pid, p in self._people.items() if pid not in getattr(self, "_seeded", set())]
+
     def people(self) -> list[dict]:
         return list(self._people.values())
 

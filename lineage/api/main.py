@@ -64,6 +64,7 @@ class AgentBody(BaseModel):
 class IntroBody(BaseModel):
     person_id: str
     area_id: str
+    as_of: date | None = None
 
 
 class WhatIfBody(BaseModel):
@@ -175,10 +176,11 @@ def create_app(prefix: str = "lineage", llm_factory: Callable | None = None, emb
         return r.to_json()
 
     @app.get("/beliefs")
-    async def beliefs(agent: str = "historian", status: str | None = None):
+    async def beliefs(agent: str = "historian", status: str | None = None, known_at: str | None = None):
+        """known_at (ISO time): what the agent believed as recorded at that moment (record time)."""
         if agent not in AGENTS:
             raise HTTPException(404, "unknown agent")
-        return await list_beliefs(st.db.select_graph(st.name("agent", agent)), status)
+        return await list_beliefs(st.db.select_graph(st.name("agent", agent)), status, known_at)
 
     def _uid(uid: str) -> str:
         if not UID.match(uid):
@@ -284,16 +286,16 @@ def create_app(prefix: str = "lineage", llm_factory: Callable | None = None, emb
     # --- Org: ownership drift + what-if ------------------------------------------------
 
     @app.get("/org/health")
-    async def health_of_modules():
+    async def health_of_modules(as_of: date | None = None):
         from lineage.graph.ownership import module_health
 
-        return await module_health(st.db.select_graph(st.name("company")))
+        return await module_health(st.db.select_graph(st.name("company")), as_of=as_of)
 
     @app.post("/org/introduce")
     async def introduce(body: IntroBody):
         from lineage.graph.ownership import introduction
 
-        return await introduction(st.db.select_graph(st.name("company")), body.person_id, body.area_id)
+        return await introduction(st.db.select_graph(st.name("company")), body.person_id, body.area_id, as_of=body.as_of)
 
     @app.get("/org/drift")
     async def drift():
