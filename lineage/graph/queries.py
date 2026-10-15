@@ -417,3 +417,87 @@ MATCH (p:PEP)-[:CONCERNS]->(a:Area)
 WHERE p.id IN $ids
 RETURN DISTINCT a.id AS id
 """
+
+# --- Steward: staleness ripple -----------------------------------------------------
+
+SUPERSEDERS = """
+MATCH (s:PEP)-[:SUPERSEDES]->(c:PEP)
+WHERE c.id IN $changed
+RETURN DISTINCT s.id AS id
+"""
+
+# PEPs that cite or require a changed PEP, up to N hops (bounded: safe on cycles).
+_RIPPLE_SOFT = """
+MATCH (x:PEP)-[:REFERENCES|REQUIRES*1..{n}]->(c:PEP)
+WHERE c.id IN $changed AND NOT x.id IN $changed AND NOT x.id IN $exclude
+RETURN DISTINCT x.id AS id
+"""
+RIPPLE_SOFT_1 = _RIPPLE_SOFT.replace("{n}", "1")
+RIPPLE_SOFT_2 = _RIPPLE_SOFT.replace("{n}", "2")
+RIPPLE_SOFT_3 = _RIPPLE_SOFT.replace("{n}", "3")
+
+MARK_PEPS_STALE = "MATCH (p:PEP) WHERE p.id IN $ids SET p.stale = true, p.stale_because = $reason"
+
+MARK_CHUNKS_STALE = """
+MATCH (ch:Chunk)-[:PART_OF]->(p:PEP)
+WHERE p.id IN $ids
+SET ch.stale = true, ch.stale_because = $reason
+RETURN ch.id AS id
+"""
+
+RIPPLE_EDGES = """
+MATCH (a:PEP)-[r:REFERENCES|REQUIRES|SUPERSEDES]->(b:PEP)
+WHERE a.id IN $ids AND b.id IN $ids
+RETURN a.id AS s, 'PEP' AS sl, {number: a.number, title: a.title, stale: a.stale} AS sp, type(r) AS t, {} AS rp,
+       b.id AS d, 'PEP' AS dl, {number: b.number, title: b.title, stale: b.stale} AS dp
+"""
+
+CLEAR_STALE = "MATCH (n) WHERE n.stale = true SET n.stale = false, n.stale_because = null"
+
+# --- Steward: fan-out into an agent's memory graph ----------------------------------
+
+# Everything an agent built on the changed evidence (walks DERIVED_FROM upward).
+DEPENDENTS_OF_EVIDENCE = """
+MATCH (e:Evidence) WHERE e.ref IN $refs
+SET e.stale = true, e.stale_because = $reason
+WITH e
+MATCH (x)-[:DERIVED_FROM*1..5]->(e)
+WHERE x:Belief OR x:Answer OR x:Action
+RETURN DISTINCT x.id AS id, labels(x)[0] AS label, x.status AS status
+"""
+
+MARK_BELIEFS_STALE = "MATCH (b:Belief) WHERE b.id IN $ids SET b.status = 'stale', b.stale = true, b.stale_because = $reason"
+MARK_ANSWERS_STALE = "MATCH (a:Answer) WHERE a.id IN $ids SET a.stale = true, a.stale_because = $reason"
+BLOCK_ACTIONS = "MATCH (x:Action) WHERE x.id IN $ids AND x.status = 'pending' SET x.status = 'blocked', x.reason = $reason RETURN x.id AS id"
+
+# --- Action gate --------------------------------------------------------------------
+
+# An action may run only if nothing it was derived from is stale or tentative.
+GATE_OFFENDING_PATH = """
+MATCH p = (a:Action {id: $id})-[:DERIVED_FROM*1..5]->(x)
+WHERE x.stale = true OR (x:Belief AND x.status = 'tentative')
+RETURN [n IN nodes(p) | n.id] AS path, x.stale AS stale, x.status AS status,
+       coalesce(x.stale_because, '') AS why, coalesce(x.ref, x.id) AS culprit
+LIMIT 1
+"""
+
+ACTION_NODE = "MATCH (x:Action {id: $id}) RETURN x.status AS status, x.kind AS kind, x.payload_json AS payload"
+
+EXECUTE_ACTION = """
+MATCH (x:Action {id: $id})
+SET x.status = 'done', x.done_at = $now
+CREATE (o:Outbox {id: $oid, action_id: $id, kind: x.kind, payload_json: x.payload_json, at: $now})
+RETURN o.id AS id
+"""
+
+SET_ACTION_BLOCKED = "MATCH (x:Action {id: $id}) SET x.status = 'blocked', x.reason = $reason"
+
+# Root cause first: the longest chain down to a stale Evidence stub.
+GATE_ROOT_CAUSE_PATH = """
+MATCH p = (a:Action {id: $id})-[:DERIVED_FROM*1..5]->(e:Evidence)
+WHERE e.stale = true
+RETURN [n IN nodes(p) | n.id] AS path, true AS stale, null AS status,
+       coalesce(e.stale_because, '') AS why, e.ref AS culprit
+ORDER BY length(p) DESC
+LIMIT 1
+"""
