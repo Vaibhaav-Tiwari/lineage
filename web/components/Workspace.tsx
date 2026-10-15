@@ -207,7 +207,9 @@ export default function Workspace() {
             </div>
             <div className="asker">
               <form onSubmit={(ev) => { ev.preventDefault(); ask(question); }}>
-                <textarea aria-label="Your question" placeholder="Why was it decided this way? Who knows this part?" value={question} rows={2}
+                <textarea aria-label="Your question" placeholder={entries.some((e) => e.kind === "qa" && e.result && !e.result.abstained)
+                            ? "Ask a follow-up — e.g. why was it decided this way?"
+                            : "Ask about a PEP, a Python module or a person — e.g. Who decided PEP 649?"} value={question} rows={2}
                           onChange={(ev) => setQuestion(ev.target.value)}
                           onKeyDown={(ev) => { if (ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); ask(question); } }} />
                 <button className="btn" disabled={busy || !question.trim()}>{busy ? "Asking…" : "Ask"}</button>
