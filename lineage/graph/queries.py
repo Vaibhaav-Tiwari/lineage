@@ -564,3 +564,51 @@ RETURN a.id AS area_id, a.name AS area, coalesce(p.github, p.id) AS who, c.count
 """
 
 AREA_NAMES = "MATCH (a:Area) WHERE a.id IN $areas RETURN a.id AS id, a.name AS name"
+
+# --- What-if (runs on a GRAPH.COPY fork) -------------------------------------------
+
+PERSON_EXISTS = "MATCH (p:Person {id: $id}) RETURN p.id AS id, coalesce(p.name, p.github) AS name"
+
+# Collaboration clusters (size >= 2) via weakly connected components.
+COLLAB_COMPONENTS = """
+CALL algo.WCC({nodeLabels: ['Person'], relationshipTypes: ['COLLABORATED']}) YIELD node, componentId
+WITH componentId, count(node) AS size
+WHERE size >= 2
+RETURN count(componentId) AS n
+"""
+
+# Areas where someone is "active": listed and not inactive, or >= 3 commits.
+ACTIVE_IN_AREAS = """
+MATCH (p:Person)-[r:EXPERT_IN|COMMITTED_TO]->(a:Area)
+WHERE a.id IN $areas AND ((type(r) = 'EXPERT_IN' AND coalesce(r.inactive, false) = false)
+                          OR (type(r) = 'COMMITTED_TO' AND r.count >= 3))
+RETURN a.id AS id, a.name AS name, count(DISTINCT p) AS n
+"""
+
+AREAS_OF_PERSON = """
+MATCH (:Person {id: $id})-[r:EXPERT_IN|COMMITTED_TO]->(a:Area)
+RETURN DISTINCT a.id AS id
+"""
+
+DELETE_PERSON = "MATCH (p:Person {id: $id}) DELETE p"
+
+TOP_COLLABORATORS = """
+MATCH (:Person {id: $id})-[c:COLLABORATED]-(y:Person)
+RETURN coalesce(y.github, y.name, y.id) AS who, c.weight AS w
+ORDER BY w DESC LIMIT 5
+"""
+
+AREA_COMMITTERS = """
+MATCH (y:Person)-[c:COMMITTED_TO]->(a:Area {id: $area})
+WHERE y.id <> $id
+RETURN coalesce(y.github, y.name, y.id) AS who, c.count AS n
+ORDER BY n DESC LIMIT 3
+"""
+
+PERSON_FOOTPRINT = """
+MATCH (p:Person {id: $id})
+OPTIONAL MATCH (p)-[:AUTHORED]->(pep:PEP)
+WITH p, count(DISTINCT pep) AS authored
+OPTIONAL MATCH (d:Decision)-[:ANNOUNCED_BY]->(p)
+RETURN authored, count(DISTINCT d) AS announced
+"""
