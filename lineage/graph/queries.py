@@ -737,3 +737,69 @@ MERGE (b)-[t2:TIE]->(a) SET t2.weight = c.weight
 
 # Undo of a change event on the shared board: drop the review tasks it opened.
 DELETE_TASKS_OF_EVENT = "MATCH (t:FixTask) WHERE t.event = $event DELETE t"
+
+# --- What-if, generalised: groups of people; previews of reversing a proposal ---------
+
+PERSONS_EXIST = "MATCH (p:Person) WHERE p.id IN $ids RETURN p.id AS id, coalesce(p.name, p.github, p.id) AS name"
+AREAS_OF_PEOPLE = "MATCH (p:Person)-[r:EXPERT_IN|COMMITTED_TO]->(a:Area) WHERE p.id IN $ids RETURN DISTINCT a.id AS id"
+DELETE_PEOPLE = "MATCH (p:Person) WHERE p.id IN $ids DELETE p"
+
+TOP_COLLABORATORS_OF_GROUP = """
+MATCH (x:Person)-[c:COLLABORATED]-(y:Person)
+WHERE x.id IN $ids AND NOT y.id IN $ids
+RETURN coalesce(y.name, y.github, y.id) AS who, sum(c.weight) AS w
+ORDER BY w DESC LIMIT 5
+"""
+
+AREA_COMMITTERS_EXCEPT = """
+MATCH (y:Person)-[c:COMMITTED_TO]->(a:Area {id: $area})
+WHERE NOT y.id IN $ids
+RETURN coalesce(y.name, y.github, y.id) AS who, c.count AS n
+ORDER BY n DESC LIMIT 3
+"""
+
+GROUP_FOOTPRINT = """
+MATCH (p:Person) WHERE p.id IN $ids
+OPTIONAL MATCH (p)-[:AUTHORED]->(pep:PEP)
+WITH collect(DISTINCT pep) AS peps
+OPTIONAL MATCH (d:Decision)-[:ANNOUNCED_BY]->(q:Person) WHERE q.id IN $ids
+RETURN size(peps) AS authored, count(DISTINCT d) AS announced
+"""
+
+# People search: names/handles that START with the text first, then word starts, then anywhere.
+SEARCH_PEOPLE_RANKED = """
+MATCH (p:Person)
+WITH p, toLower(coalesce(p.name, '')) AS n, toLower(coalesce(p.github, '')) AS h, toLower($q) AS q
+WHERE n CONTAINS q OR h CONTAINS q
+WITH p, CASE WHEN n STARTS WITH q OR h STARTS WITH q THEN 0 WHEN n CONTAINS (' ' + q) THEN 1 ELSE 2 END AS rank
+OPTIONAL MATCH (p)-[:AUTHORED]->(pep:PEP)
+WITH p, rank, count(pep) AS peps
+OPTIONAL MATCH (p)-[c:COMMITTED_TO]->(:Area)
+RETURN p.id AS id, coalesce(p.name, p.github) AS name, p.github AS handle, peps, coalesce(sum(c.count), 0) AS commits, rank
+ORDER BY rank, peps DESC, commits DESC, name
+LIMIT 8
+"""
+
+SEARCH_PEPS = """
+MATCH (p:PEP)
+WHERE toString(p.number) STARTS WITH $q OR toLower(p.title) CONTAINS toLower($q)
+RETURN p.id AS id, p.number AS number, p.title AS title, p.status AS status
+ORDER BY CASE WHEN toString(p.number) = $q THEN 0 ELSE 1 END, coalesce(p.pagerank, 0) DESC
+LIMIT 8
+"""
+
+PEP_BRIEFS = """
+MATCH (p:PEP) WHERE p.id IN $ids
+RETURN p.id AS id, p.number AS number, p.title AS title, p.status AS status
+ORDER BY coalesce(p.pagerank, 0) DESC
+"""
+
+CHUNKS_OF_PEPS = "MATCH (c:Chunk)-[:PART_OF]->(p:PEP) WHERE p.id IN $ids RETURN c.id AS id"
+
+# Read-only twin of DEPENDENTS_OF_EVIDENCE: what an agent built on these ids (nothing is marked).
+DEPENDENTS_PREVIEW = """
+MATCH (e:Evidence) WHERE e.ref IN $refs
+MATCH (x)-[:DERIVED_FROM*1..5]->(e)
+WHERE (x:Belief AND x.status <> 'stale') OR (x:Answer AND coalesce(x.stale, false) = false) OR (x:Action AND x.status = 'pending')
+RETURN labels(x)[0] AS label, count(DISTINCT x) AS n
+"""

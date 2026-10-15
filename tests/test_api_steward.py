@@ -115,3 +115,15 @@ async def test_org_clusters_endpoint(env):
     c, _ = env
     r = await c.get("/org/clusters")
     assert r.status_code == 200 and isinstance(r.json(), list)
+
+
+async def test_org_group_whatif_preview_and_searches(env):
+    c, _ = env
+    assert (await c.get("/org/people", params={"q": "a"})).json()[0]["name"] == "Ann Author"
+    peps = (await c.get("/org/peps", params={"q": "PEP 10"})).json()
+    assert [p["number"] for p in peps][:1] == [100]
+    w = (await c.post("/org/whatif", json={"person_ids": ["person:ann-author", "person:bob-builder"]})).json()
+    assert w["people_count"] == 2 and w["plain"]["headline"].startswith("If Ann Author and Bob Builder left")
+    p = (await c.post("/org/preview", json={"pep": 101})).json()
+    assert p["pep"]["number"] == 101 and "nothing has been changed" in p["plain"].lower()
+    assert (await c.post("/org/preview", json={"pep": 999})).status_code == 404

@@ -52,7 +52,7 @@ def explain_departure(w: dict) -> dict:
         if people:
             groups.setdefault((basis.get(area, "collaboration"), tuple(people)), []).append(area)
     for (how, people), areas in groups.items():
-        where = " or ".join(areas)
+        where = areas[0] if len(areas) == 1 else ", ".join(areas[:-1]) + " or " + areas[-1]
         if how == "commits":
             bullets.append(f"For {where}, {_and(list(people))} already commit there and could take over.")
         else:
@@ -93,3 +93,22 @@ def explain_drift(a: dict) -> str:
     if u:
         bits.append(f"{_n(u, 'active contributor')} {'isn' if u == 1 else 'aren'}'t listed")
     return (", and ".join(bits) + ".").capitalize() if bits else "The ownership list is out of date."
+
+
+def explain_preview(r: dict) -> str:
+    p = r["pep"]
+    deps = len(r.get("dependents", []))
+    h = (r.get("agents") or {}).get("historian") or {"answers": 0, "beliefs": 0, "actions": 0}
+    parts = [f"If PEP {p['number']} ({p['title']}) were reversed,"]
+    parts.append(f"{_n(deps, 'other proposal')} that cite{'s' if deps == 1 else ''} it would need review." if deps
+                 else "No other proposal cites it, so nothing else would need review.")
+    built = [x for x in (_n(h["answers"], "answer") if h["answers"] else "", _n(h["beliefs"], "belief") if h["beliefs"] else "") if x]
+    if built:
+        s = f"The Historian has {' and '.join(built)} built on it"
+        s += f", and {_n(h['actions'], 'planned action')} would be put on hold." if h["actions"] else "."
+        parts.append(s)
+    else:
+        parts.append("Nothing the Historian has concluded depends on it.")
+    parts.append("This is a preview: nothing has been changed.")
+    text = " ".join(parts)
+    return text.replace(" were reversed, No other", " were reversed, no other")

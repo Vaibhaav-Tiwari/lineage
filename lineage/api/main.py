@@ -62,7 +62,12 @@ class AgentBody(BaseModel):
 
 
 class WhatIfBody(BaseModel):
-    person_id: str
+    person_id: str | None = None
+    person_ids: list[str] = []
+
+
+class PreviewBody(BaseModel):
+    pep: int
 
 
 class State:
@@ -252,12 +257,31 @@ def create_app(prefix: str = "lineage", llm_factory: Callable | None = None, emb
 
     @app.get("/org/people")
     async def people(q: str = ""):
-        return await ro(st.db.select_graph(st.name("company")), Q.SEARCH_PEOPLE, {"q": q})
+        from lineage.graph.whatif import search_people
+
+        return await search_people(st.db.select_graph(st.name("company")), q)
+
+    @app.get("/org/peps")
+    async def peps(q: str = ""):
+        from lineage.graph.whatif import search_peps
+
+        return await search_peps(st.db.select_graph(st.name("company")), q)
 
     @app.post("/org/whatif")
     async def whatif(body: WhatIfBody):
+        ids = body.person_ids or ([body.person_id] if body.person_id else [])
         try:
-            return await departure_impact(st.steward_db, body.person_id, base=st.name("company"))
+            return await departure_impact(st.steward_db, ids, base=st.name("company"))
+        except ValueError as e:
+            raise HTTPException(404, str(e))
+
+    @app.post("/org/preview")
+    async def preview(body: PreviewBody):
+        from lineage.graph.whatif import preview_reversal
+
+        try:
+            return await preview_reversal(st.db.select_graph(st.name("company")), body.pep,
+                                          agent_graphs={a: st.db.select_graph(st.name("agent", a)) for a in AGENTS})
         except ValueError as e:
             raise HTTPException(404, str(e))
 

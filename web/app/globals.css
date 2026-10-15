@@ -310,3 +310,23 @@ a { color: var(--cyan); }
 .tile-plain { margin: 0.35rem 0 0; font-size: var(--step--1); color: var(--ink-soft); line-height: 1.4; }
 .steward-details { margin-top: 0.35rem; font-size: var(--step--1); color: var(--ink-soft); }
 .steward-details summary { cursor: pointer; color: var(--stamp); }
+
+/* ---------- what-if panel ---------- */
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.whatif-panel { margin: 0 0 1.4rem; max-width: 80ch; }
+.whatif-modes { display: flex; flex-wrap: wrap; gap: 0.3rem 0.4rem; align-items: baseline; margin-bottom: 0.6rem; font-size: var(--step-1); }
+.whatif-modes > span { font-family: var(--display); margin-right: 0.2rem; }
+.whatif-modes button { background: none; border: 0; border-bottom: 1px dashed var(--ink-faint); padding: 0 0.1rem; cursor: pointer; color: var(--ink-soft); font-size: var(--step-0); }
+.whatif-modes button[aria-selected="true"] { color: var(--ink); border-bottom: 2px solid var(--ink); }
+.combo { position: relative; max-width: 420px; }
+.combo input { width: 100%; border: 1px solid var(--rule); background: var(--card); padding: 0.45rem 0.65rem; }
+.combo-list { position: absolute; top: calc(100% + 2px); left: 0; right: 0; z-index: 8; list-style: none; margin: 0; padding: 0;
+  background: var(--card); border: 1px solid var(--rule); box-shadow: 0 8px 24px rgba(24, 35, 58, 0.12); }
+.combo-list li { padding: 0.4rem 0.65rem; cursor: pointer; display: flex; gap: 0.5rem; align-items: baseline; }
+.combo-list li[aria-selected="true"] { background: var(--cyan-wash); }
+.combo-list .combo-empty { color: var(--ink-faint); font-style: italic; cursor: default; }
+.meta { font-family: var(--typed); font-size: 0.78rem; color: var(--ink-faint); }
+.group-pick { display: flex; flex-direction: column; gap: 0.6rem; }
+.chosen { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
+.chosen-chip { display: inline-flex; gap: 0.3rem; align-items: center; border: 1px solid var(--ink); padding: 0.1rem 0.2rem 0.1rem 0.5rem; background: var(--card); }
+.chosen-chip button { background: none; border: 0; cursor: pointer; font-size: 1rem; line-height: 1; color: var(--ink-soft); }

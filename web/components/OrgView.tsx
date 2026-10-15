@@ -3,33 +3,18 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import Tip from "./Tip";
+import WhatIf from "./WhatIf";
 
 export default function OrgView() {
   const [areas, setAreas] = useState<any[]>([]);
-  const [q, setQ] = useState("");
-  const [people, setPeople] = useState<any[]>([]);
   const [w, setW] = useState<any>(null);
-  const [running, setRunning] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const [picked, setPicked] = useState(false);
   const [clusters, setClusters] = useState<any[]>([]);
-  const [showHow, setShowHow] = useState(false);
 
   useEffect(() => {
     api.drift().then(setAreas).catch(() => setErr("Could not reach the API."));
     api.clusters().then(setClusters).catch(() => {});
   }, []);
-  useEffect(() => {
-    if (picked || q.trim().length < 2) { setPeople([]); return; }
-    const t = setTimeout(() => api.people(q).then(setPeople).catch(() => {}), 200);
-    return () => clearTimeout(t);
-  }, [q, picked]);
-
-  async function simulate(p: any) {
-    setShowHow(false); setPicked(true); setPeople([]); setQ(p.name ?? p.github); setRunning(p.name ?? p.github); setW(null);
-    try { setW(await api.whatif(p.id)); } finally { setRunning(null); }
-  }
-
   const lost = new Set<string>(w?.orphaned_areas ?? []);
   const risk = new Set<string>((w?.at_risk_areas ?? []).map((a: any) => a.area));
   const counts = areas.reduce((m: any, a) => ({ ...m, [a.status]: (m[a.status] ?? 0) + 1 }), {});
@@ -46,35 +31,9 @@ export default function OrgView() {
           <span><span className="person revealed">name</span> committing, not listed</span>
           <span><span className="person listed revealed">name</span> listed and committing</span>
         </div>
-        <div className="whatif">
-          <label htmlFor="who">What if</label>
-          <input id="who" value={q} onChange={(e) => { setPicked(false); setQ(e.target.value); }} placeholder="a person left… (try Guido)" autoComplete="off" />
-          {people.length > 0 && (
-            <div className="whatif-results">
-              {people.map((p) => <button key={p.id} onClick={() => simulate(p)}>{p.name ?? p.github} <span className="typed" style={{ color: "var(--ink-faint)" }}>{p.peps} PEPs</span></button>)}
-            </div>
-          )}
-        </div>
       </div>
 
-      {running && <p className="working">Copying the whole graph, removing {running} from the copy, re-running the algorithms…</p>}
-      {w && (
-        <div className="verdict">
-          <h3>{w.plain.headline}</h3>
-          <ul className="plain-list">{w.plain.bullets.map((b: string) => <li key={b}>{b}</li>)}</ul>
-          <button className="linkish" aria-expanded={showHow} onClick={() => setShowHow(!showHow)}>
-            {showHow ? "Hide how this was measured" : "Show how this was measured"}
-          </button>
-          {showHow && (
-            <p className="how">
-              Computed on a throwaway copy of the graph ({Math.round(w.fork_mb)} MB, {Math.round(w.ms / 100) / 10} s) with <span className="typed">GRAPH.COPY</span>; the live graph was not touched.
-              {" "}Weakly connected components on the collaboration graph: {w.components_before} groups before, {w.components_after} after.
-              {" "}Betweenness centrality: rank {w.bridge_rank} of {w.people_ranked} (score {w.bridge_score}).
-              {" "}Modules counted as covered when someone is listed and not inactive, or made at least 3 commits in the last 12 months.
-            </p>
-          )}
-        </div>
-      )}
+      <WhatIf onResult={setW} />
       {err && <p className="a-note">{err}</p>}
       <p className="trace" style={{ marginBottom: "0.8rem" }}>
         {counts.healthy ?? 0} healthy, {counts.drifting ?? 0} drifting, {counts.orphaned ?? 0} orphaned, out of {areas.length} modules with commit data.
