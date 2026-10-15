@@ -45,7 +45,7 @@ questions:
     facts: [["Tim Peters", "tim-one"]]
     expected_ids: [pep:20, person:tim-one]
   - q: Who should I ask about asyncio today? Who is actually committing to it?
-    facts: [["deadlovelll"], ["kumaraditya303", "Kumar Aditya"]]
+    facts: [["deadlovelll", "Timofei Ivankov"], ["kumaraditya303", "Kumar Aditya"]]
     expected_ids: [person:kumaraditya303]
   - q: Who is actively working on the typing module right now?
     facts: [["JelleZijlstra", "Jelle Zijlstra", "jellezijlstra"]]

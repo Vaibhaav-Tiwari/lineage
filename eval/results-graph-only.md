@@ -11,8 +11,8 @@
 
 | Tool | Calls | p50 | p95 |
 |---|---|---|---|
-| decision_path | 15 | 6.7 | 12.3 |
-| who_knows | 2 | 3.7 | 8.3 |
+| decision_path | 15 | 9.9 | 19.3 |
+| who_knows | 2 | 3.3 | 7.2 |
 
 ## Questions
 
