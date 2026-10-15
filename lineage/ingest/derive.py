@@ -29,6 +29,7 @@ async def derive_collaboration(g) -> int:
         w[(r["a"], r["b"])] += 2 * r["n"]
     rows = [{"a": a, "b": b, "w": v} for (a, b), v in w.items()]
     await write_batch(g, Q.UPSERT_COLLABORATED, rows)
+    await rw(g, Q.MATERIALIZE_TIES)
     return len(rows)
 
 
@@ -64,3 +65,7 @@ async def derive_concerns(g) -> int:
 
 async def compute_pagerank(g) -> None:
     await rw(g, Q.PAGERANK_PEPS)
+
+
+async def materialize_ties(g) -> None:
+    await rw(g, Q.MATERIALIZE_TIES)

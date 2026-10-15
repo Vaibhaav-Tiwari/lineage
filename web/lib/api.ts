@@ -47,6 +47,7 @@ export const api = {
   fixtasks: () => call<any[]>("/fixtasks"),
   claim: (agent: string) => call<any>("/fixtasks/claim", { method: "POST", body: JSON.stringify({ agent }) }),
   drift: () => call<any[]>("/org/drift"),
+  clusters: () => call<any[]>("/org/clusters"),
   people: (q: string) => call<any[]>(`/org/people?q=${encodeURIComponent(q)}`),
   whatif: (person_id: string) => call<any>("/org/whatif", { method: "POST", body: JSON.stringify({ person_id }) }),
   beliefs: () => call<any[]>("/beliefs?agent=historian"),

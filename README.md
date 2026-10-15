@@ -115,6 +115,19 @@ Belief status is `tentative | committed | stale`; action status is `pending | bl
 
 Full design: [docs/specs/2026-10-14-lineage-design.md](docs/specs/2026-10-14-lineage-design.md).
 
+### How this memory model differs from Graphiti, Cognee, GraphRAG-SDK
+
+| | Graphiti | Cognee / GraphRAG-SDK | **Lineage** |
+|---|---|---|---|
+| What is remembered | facts extracted from conversations, with valid-from/valid-to | a knowledge graph built from documents | company facts **and every agent's answers, beliefs and actions, linked to the evidence they rest on** |
+| When a fact changes | old edge is invalidated | re-index | the change **walks `DERIVED_FROM` into every agent's memory**: beliefs and answers go stale, dependent actions are blocked, review tasks are opened |
+| Writes | an LLM call per write | an LLM pipeline | deterministic parsing; exact provenance (announcing post, person, date) |
+| Isolation | `group_id` filter in one graph | dataset filter | **a separate FalkorDB graph per agent and per user, enforced by per-agent database logins** |
+| Multi-agent coordination | — | — | a shared board with atomic claims |
+| Forgetting | invalidation | delete | user-driven, and **provable**: no path back remains |
+
+Graphiti is more general, because it learns from unstructured chat. Lineage is built for an organisation's *record*, and trades that generality for exact provenance and un-learning.
+
 ---
 
 ## Cypher queries and algorithms
@@ -177,7 +190,10 @@ MERGE (a:Agent {name: $agent}) MERGE (a)-[:CLAIMED {until: $until}]->(t)
 
 | Algorithm | Used for |
 |---|---|
-| `algo.pageRank('PEP','REFERENCES')` | PEP influence, stored and used to re-rank search |
+| `algo.pageRank('PEP','REFERENCES')` | PEP influence, stored and used to re-rank search and to name topic clusters |
+| `shortestPath(...)` | the Historian's `connection` tool: *"How is Guido connected to PEP 695?"* returns the actual chain |
+| `algo.betweenness` on `Person`/`TIE` | what-if: how much a person bridges otherwise separate groups (Guido ranks #2 of 907). `TIE` is a two-way copy of `COLLABORATED`, because betweenness follows edge direction and collaboration has none |
+| `algo.labelPropagation` on the PEP citation graph | topic communities (Type Hints, modern packaging, the stable ABI…). On people it finds one giant core-developer community, so we cluster proposals instead |
 | `algo.WCC` on `Person`/`COLLABORATED` | collaboration clusters before and after a departure (on the fork) |
 | `GRAPH.COPY` / `GRAPH.DELETE` | counterfactual forks |
 | Vector (HNSW, cosine) + full-text (RediSearch) indexes | hybrid retrieval over PEP text and forum posts |

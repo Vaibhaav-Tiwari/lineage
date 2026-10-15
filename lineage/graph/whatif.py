@@ -33,6 +33,9 @@ async def departure_impact(db, person_id: str, base: str = "lineage:company") ->
     comps_before = await _components(live)
     footprint = (await ro(live, Q.PERSON_FOOTPRINT, {"id": person_id}))[0]
     collaborators = [r["who"] for r in await ro(live, Q.TOP_COLLABORATORS, {"id": person_id})]
+    ranking = await ro(live, Q.BETWEENNESS_PEOPLE)
+    rank = next((i + 1 for i, r in enumerate(ranking) if r["id"] == person_id), None)
+    score = next((r["score"] for r in ranking if r["id"] == person_id), 0.0)
 
     fork_name = f"{base}:fork:{uuid.uuid4().hex[:8]}"
     await live.copy(fork_name)
@@ -60,5 +63,6 @@ async def departure_impact(db, person_id: str, base: str = "lineage:company") ->
         "orphaned_areas": sorted(orphaned), "at_risk_areas": sorted(at_risk, key=lambda x: x["area"]),
         "components_before": comps_before, "components_after": comps_after,
         "suggested_successors": successors, "authored_peps": footprint["authored"],
-        "decisions_announced": footprint["announced"], "ms": round((time.perf_counter() - t0) * 1000),
+        "decisions_announced": footprint["announced"],
+        "bridge_rank": rank, "bridge_score": round(float(score), 1), "people_ranked": len(ranking), "ms": round((time.perf_counter() - t0) * 1000),
     }

@@ -11,7 +11,7 @@ from lineage.db import ro
 from lineage.graph import queries as Q
 from lineage.graph.search import hits_to_fragment, hybrid_search
 from lineage.graph.subgraph import Fragment
-from lineage.graph.tools import TOOL_SPECS, decision_path, pep_timeline, related_peps, who_knows
+from lineage.graph.tools import TOOL_SPECS, connection, decision_path, pep_timeline, related_peps, who_knows
 from lineage.memory.store import record_answer, record_episode
 
 MAX_TOOL_CALLS = 6
@@ -25,7 +25,7 @@ owns which part of the code.
 Answer only from what the tools return. Every claim in your answer must rest on ids that appeared in a tool \
 result (e.g. pep:649, decision:pep:649:accept, person:gpshead, post:96520). For WHY / WHO DECIDED questions \
 use decision_path; for WHEN, pep_timeline; for WHO SHOULD I ASK, who_knows; use search when you don't yet \
-know which PEP is involved. You have at most 6 tool calls.
+know which PEP is involved; for HOW IS X CONNECTED TO Y, connection. You have at most 6 tool calls.
 
 Finish by calling submit_answer with a short, direct answer (2-6 sentences, name people and dates), the ids \
 you rely on, and 1-3 beliefs you concluded with the ids each rests on and an honest confidence. If the tools \
@@ -58,6 +58,8 @@ async def _run_tool(name: str, inp: dict, company_g, embedder, as_of: date | Non
         return await pep_timeline(company_g, int(inp["pep"]), as_of)
     if name == "who_knows":
         return await who_knows(company_g, str(inp["topic"]), as_of)
+    if name == "connection":
+        return await connection(company_g, str(inp["a"]), str(inp["b"]))
     if name == "related_peps":
         return await related_peps(company_g, int(inp["pep"]), int(inp.get("hops", 2)))
     raise ValueError(f"unknown tool {name}")

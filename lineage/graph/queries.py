@@ -664,3 +664,56 @@ RETURN a.name AS name
 ORDER BY size(a.name) DESC
 LIMIT 1
 """
+
+# --- Algorithms as agent tools ---------------------------------------------------------
+
+RESOLVE_PERSON = """
+MATCH (p:Person)
+WHERE toLower(p.name) = toLower($q) OR toLower(p.github) = toLower($q)
+   OR toLower(p.name) CONTAINS toLower($q)
+RETURN p.id AS id, (toLower(coalesce(p.name, '')) = toLower($q) OR toLower(coalesce(p.github, '')) = toLower($q)) AS exact
+ORDER BY exact DESC LIMIT 1
+"""
+
+RESOLVE_AREA = "MATCH (a:Area) WHERE toLower(a.name) = toLower($q) RETURN a.id AS id LIMIT 1"
+
+# Shortest chain between two things (FalkorDB allows shortestPath only in WITH/RETURN).
+_SHORTEST = """
+MATCH (a:{la} {id: $a}), (b:{lb} {id: $b})
+WITH a, b, shortestPath((a)-[:AUTHORED|DECIDES|ANNOUNCED_BY|SUPERSEDES|REFERENCES|REQUIRES|IMPLEMENTS|AUTHORED_PR|COLLABORATED|DELEGATE_FOR|EXPERT_IN|COMMITTED_TO|CONCERNS*1..6]-(b)) AS p
+WHERE p IS NOT NULL
+RETURN [n IN nodes(p) | {id: n.id, label: labels(n)[0], name: coalesce(n.name, n.github, n.title, n.kind)}] AS nodes,
+       [r IN relationships(p) | {type: type(r), src: startNode(r).id, dst: endNode(r).id}] AS rels
+"""
+
+# Who bridges otherwise separate groups of collaborators. Runs on TIE (two-way copies of
+# COLLABORATED): FalkorDB's betweenness follows edge direction, and collaboration has none.
+BETWEENNESS_PEOPLE = """
+CALL algo.betweenness({nodeLabels: ['Person'], relationshipTypes: ['TIE']}) YIELD node, score
+RETURN node.id AS id, score
+ORDER BY score DESC
+"""
+
+# Topic clusters in the proposal citation graph (community detection via label propagation).
+PEP_COMMUNITIES = """
+CALL algo.labelPropagation({nodeLabels: ['PEP'], relationshipTypes: ['REFERENCES', 'REQUIRES', 'SUPERSEDES']}) YIELD node, communityId
+WITH communityId, collect(node) AS ps
+WHERE size(ps) >= $min
+RETURN communityId AS cid, size(ps) AS size,
+       [p IN ps | {id: p.id, number: p.number, title: p.title, pagerank: coalesce(p.pagerank, 0.0)}] AS members
+ORDER BY size DESC
+"""
+
+AREA_COUNTS_FOR_PEPS = """
+MATCH (p:PEP)-[:CONCERNS]->(a:Area)
+WHERE p.id IN $ids
+RETURN a.name AS area, count(p) AS n
+ORDER BY n DESC LIMIT 4
+"""
+
+# Two-way TIE edges for direction-sensitive algorithms (betweenness).
+MATERIALIZE_TIES = """
+MATCH (a:Person)-[c:COLLABORATED]->(b:Person)
+MERGE (a)-[t1:TIE]->(b) SET t1.weight = c.weight
+MERGE (b)-[t2:TIE]->(a) SET t2.weight = c.weight
+"""

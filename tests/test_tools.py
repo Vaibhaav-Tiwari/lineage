@@ -86,7 +86,7 @@ async def test_related_peps_hops_capped(g):
 
 def test_tool_specs_cover_all_tools():
     names = {t["name"] for t in TOOL_SPECS}
-    assert names == {"search", "decision_path", "pep_timeline", "who_knows", "related_peps", "submit_answer"}
+    assert names == {"search", "decision_path", "pep_timeline", "who_knows", "related_peps", "connection", "submit_answer"}
     assert all("input_schema" in t and "description" in t for t in TOOL_SPECS)
 
 

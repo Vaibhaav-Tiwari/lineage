@@ -1014,7 +1014,7 @@ RETURN a.id AS s, labels(a)[0] AS sl, properties(a) AS sp, type(r) AS t, propert
 Limit
     Project
         Filter
-            Conditional Traverse | (b)<-[r:AUTHORED|IMPLEMENTS|DELEGATE_FOR|DECIDES|AFFECTS]-(a)
+            Conditional Traverse | (b)<-[r:AFFECTS|DECIDES|IMPLEMENTS|DELEGATE_FOR|AUTHORED]-(a)
                 Filter
                     Node By Index Scan | (b:PEP)
 ```
@@ -1140,7 +1140,7 @@ Limit
             Distinct
                 Project
                     Unwind
-                        Conditional Variable Length Traverse | (_anon_0)-[_anon_1:SUPERSEDES|REQUIRES|REFERENCES*1..2]->(_anon_2)
+                        Conditional Variable Length Traverse | (_anon_0)-[_anon_1:REFERENCES|REQUIRES|SUPERSEDES*1..2]->(_anon_2)
                             Filter
                                 Node By Index Scan | (_anon_0:PEP)
 ```
@@ -1208,7 +1208,7 @@ RETURN a.id AS s, labels(a)[0] AS sl, properties(a) AS sp, type(r) AS t, propert
 
 ```
 Project
-    Conditional Traverse | (b)<-[r:EXPERT_IN|COMMITTED_TO]-(a:Person)
+    Conditional Traverse | (b)<-[r:COMMITTED_TO|EXPERT_IN]-(a:Person)
         Filter
             Node By Index Scan | (b:Area)
 ```
@@ -1543,7 +1543,7 @@ RETURN DISTINCT x.id AS id
 Distinct
     Project
         Filter
-            Conditional Variable Length Traverse | (x)-[_anon_0:REQUIRES|REFERENCES*1..3]->(c)
+            Conditional Variable Length Traverse | (x)-[_anon_0:REFERENCES|REQUIRES*1..3]->(c)
                 Filter
                     Node By Label Scan | (x:PEP)
 ```
@@ -1600,7 +1600,7 @@ RETURN a.id AS s, 'PEP' AS sl, {number: a.number, title: a.title, stale: a.stale
 ```
 Project
     Filter
-        Conditional Traverse | (a)-[r:REQUIRES|SUPERSEDES|REFERENCES]->(b:PEP)
+        Conditional Traverse | (a)-[r:SUPERSEDES|REFERENCES|REQUIRES]->(b:PEP)
             Filter
                 Node By Index Scan | (a:PEP)
 ```
@@ -2054,7 +2054,7 @@ RETURN a.id AS id, a.name AS name, count(DISTINCT p) AS n
 ```
 Aggregate
     Filter
-        Conditional Traverse | (a)<-[r:COMMITTED_TO|EXPERT_IN]-(p:Person)
+        Conditional Traverse | (a)<-[r:EXPERT_IN|COMMITTED_TO]-(p:Person)
             Filter
                 Node By Index Scan | (a:Area)
 ```
@@ -2275,5 +2275,158 @@ Commit
     Delete
         Conditional Traverse | (_anon_1)<-[r:CONCERNS]-(_anon_0:PEP)
             Node By Label Scan | (_anon_1:Area)
+```
+</details>
+
+### `AREAS_NAMED_IN`
+
+Graph-only backend: which known module names appear in a question.
+
+```cypher
+MATCH (a:Area)
+WHERE size(a.name) >= 4 AND toLower($q) CONTAINS toLower(a.name)
+RETURN a.name AS name
+ORDER BY size(a.name) DESC
+LIMIT 1
+```
+
+<details><summary>Execution plan</summary>
+
+```
+Limit
+    Sort
+        Project
+            Filter
+                Node By Label Scan | (a:Area)
+```
+</details>
+
+## Algorithms as agent tools
+
+### `RESOLVE_PERSON`
+
+```cypher
+MATCH (p:Person)
+WHERE toLower(p.name) = toLower($q) OR toLower(p.github) = toLower($q)
+   OR toLower(p.name) CONTAINS toLower($q)
+RETURN p.id AS id, (toLower(coalesce(p.name, '')) = toLower($q) OR toLower(coalesce(p.github, '')) = toLower($q)) AS exact
+ORDER BY exact DESC LIMIT 1
+```
+
+<details><summary>Execution plan</summary>
+
+```
+Limit
+    Sort
+        Project
+            Filter
+                Node By Label Scan | (p:Person)
+```
+</details>
+
+### `RESOLVE_AREA`
+
+```cypher
+MATCH (a:Area) WHERE toLower(a.name) = toLower($q) RETURN a.id AS id LIMIT 1
+```
+
+<details><summary>Execution plan</summary>
+
+```
+Limit
+    Project
+        Filter
+            Node By Label Scan | (a:Area)
+```
+</details>
+
+### `BETWEENNESS_PEOPLE`
+
+Who bridges otherwise separate groups of collaborators. Runs on TIE (two-way copies of COLLABORATED): FalkorDB's betweenness follows edge direction, and collaboration has none.
+
+```cypher
+CALL algo.betweenness({nodeLabels: ['Person'], relationshipTypes: ['TIE']}) YIELD node, score
+RETURN node.id AS id, score
+ORDER BY score DESC
+```
+
+<details><summary>Execution plan</summary>
+
+```
+Sort
+    Project
+        ProcedureCall
+```
+</details>
+
+### `PEP_COMMUNITIES`
+
+Topic clusters in the proposal citation graph (community detection via label propagation).
+
+```cypher
+CALL algo.labelPropagation({nodeLabels: ['PEP'], relationshipTypes: ['REFERENCES', 'REQUIRES', 'SUPERSEDES']}) YIELD node, communityId
+WITH communityId, collect(node) AS ps
+WHERE size(ps) >= $min
+RETURN communityId AS cid, size(ps) AS size,
+       [p IN ps | {id: p.id, number: p.number, title: p.title, pagerank: coalesce(p.pagerank, 0.0)}] AS members
+ORDER BY size DESC
+```
+
+<details><summary>Execution plan</summary>
+
+```
+Sort
+    Project
+        Filter
+            Aggregate
+                ProcedureCall
+```
+</details>
+
+### `AREA_COUNTS_FOR_PEPS`
+
+```cypher
+MATCH (p:PEP)-[:CONCERNS]->(a:Area)
+WHERE p.id IN $ids
+RETURN a.name AS area, count(p) AS n
+ORDER BY n DESC LIMIT 4
+```
+
+<details><summary>Execution plan</summary>
+
+```
+Limit
+    Sort
+        Aggregate
+            Conditional Traverse | (p)->(a:Area)
+                Filter
+                    Node By Index Scan | (p:PEP)
+```
+</details>
+
+### `MATERIALIZE_TIES`
+
+Two-way TIE edges for direction-sensitive algorithms (betweenness).
+
+```cypher
+MATCH (a:Person)-[c:COLLABORATED]->(b:Person)
+MERGE (a)-[t1:TIE]->(b) SET t1.weight = c.weight
+MERGE (b)-[t2:TIE]->(a) SET t2.weight = c.weight
+```
+
+<details><summary>Execution plan</summary>
+
+```
+Commit
+    Update
+        Merge | (b)-[t2:TIE]->(a), 
+            Update
+                Merge | (a)-[t1:TIE]->(b), 
+                    Conditional Traverse | (a)-[c:COLLABORATED]->(b:Person)
+                        Node By Label Scan | (a:Person)
+                    Expand Into | (a)-[t1:TIE]->(b:Person)
+                        Argument
+            Expand Into | (b)-[t2:TIE]->(a:Person)
+                Argument
 ```
 </details>

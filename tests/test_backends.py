@@ -33,7 +33,7 @@ async def test_sdk_tool_handlers_route_through_the_session(db):
     try:
         s = ToolSession(cg, FakeEmbedder(), None)
         tools = {t.name: t for t in build_sdk_tools(s)}
-        assert set(tools) == {"search", "decision_path", "pep_timeline", "who_knows", "related_peps", "submit_answer"}
+        assert set(tools) == {"search", "decision_path", "pep_timeline", "who_knows", "related_peps", "connection", "submit_answer"}
         out = await tools["decision_path"].handler({"pep": 102})
         assert "Bob" in out["content"][0]["text"] and not out.get("is_error")
         await tools["submit_answer"].handler({"text": "t", "citations": ["pep:102"], "beliefs": []})

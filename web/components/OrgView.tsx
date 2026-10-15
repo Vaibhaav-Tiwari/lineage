@@ -11,8 +11,12 @@ export default function OrgView() {
   const [running, setRunning] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [picked, setPicked] = useState(false);
+  const [clusters, setClusters] = useState<any[]>([]);
 
-  useEffect(() => { api.drift().then(setAreas).catch(() => setErr("Could not reach the API.")); }, []);
+  useEffect(() => {
+    api.drift().then(setAreas).catch(() => setErr("Could not reach the API."));
+    api.clusters().then(setClusters).catch(() => {});
+  }, []);
   useEffect(() => {
     if (picked || q.trim().length < 2) { setPeople([]); return; }
     const t = setTimeout(() => api.people(q).then(setPeople).catch(() => {}), 200);
@@ -60,6 +64,7 @@ export default function OrgView() {
             {" "}Collaboration splits from {w.components_before} into {w.components_after} separate groups.
             {" "}{w.orphaned_areas.length ? `${w.orphaned_areas.join(", ")} would have nobody active.` : "No module is left without anyone active."}
             {" "}{w.at_risk_areas.length ? `${w.at_risk_areas.map((a: any) => a.area).join(", ")} would rest on a single person.` : ""}
+            {w.bridge_rank ? ` Among ${w.people_ranked} contributors, they are the number ${w.bridge_rank} bridge between otherwise separate groups (betweenness).` : ""}
             {" "}They wrote {w.authored_peps} proposals{w.decisions_announced ? ` and announced ${w.decisions_announced} decision${w.decisions_announced === 1 ? "" : "s"}` : ""}.
           </p>
           {Object.keys(w.suggested_successors).length > 0 && (
@@ -92,6 +97,23 @@ export default function OrgView() {
           );
         })}
       </div>
+      {clusters.length > 0 && (
+        <section style={{ marginTop: "2.2rem" }}>
+          <h2 style={{ fontFamily: "var(--display)", fontWeight: 400, fontSize: "var(--step-2)", margin: "0 0 0.2rem" }}>Topics the proposals form</h2>
+          <p className="trace" style={{ margin: "0 0 0.9rem", maxWidth: "70ch" }}>
+            Communities found by label propagation over the citation graph, each named after its most influential proposal (PageRank).
+          </p>
+          <div className="tiles">
+            {clusters.map((c) => (
+              <section key={c.id} className="tile">
+                <h3 style={{ fontFamily: "var(--display)", fontWeight: 400, fontSize: "var(--step-1)" }}>{c.label}</h3>
+                <div className="status">{c.size} proposals{c.areas.length ? `, mostly about ${c.areas.slice(0, 2).join(" and ")}` : ""}</div>
+                <div className="people">{c.top.slice(0, 6).map((p: any) => <span key={p.id} className="person" title={p.title}>PEP {p.number}</span>)}</div>
+              </section>
+            ))}
+          </div>
+        </section>
+      )}
     </main>
   );
 }

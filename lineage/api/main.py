@@ -243,6 +243,12 @@ def create_app(prefix: str = "lineage", llm_factory: Callable | None = None, emb
     async def drift():
         return await ownership_drift(st.db.select_graph(st.name("company")))
 
+    @app.get("/org/clusters")
+    async def clusters(min_size: int = 6):
+        from lineage.graph.clusters import pep_clusters
+
+        return await pep_clusters(st.db.select_graph(st.name("company")), min_size=min_size)
+
     @app.get("/org/people")
     async def people(q: str = ""):
         return await ro(st.db.select_graph(st.name("company")), Q.SEARCH_PEOPLE, {"q": q})

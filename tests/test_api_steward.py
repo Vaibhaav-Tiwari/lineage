@@ -109,3 +109,9 @@ async def test_demo_reset_wipes_agent_memory_and_rewinds(env):
     assert (await c.get("/beliefs")).json() == []
     assert (await c.get("/fixtasks")).json() == []
     assert (await c.get("/events")).json()[0]["applied"] is False
+
+
+async def test_org_clusters_endpoint(env):
+    c, _ = env
+    r = await c.get("/org/clusters")
+    assert r.status_code == 200 and isinstance(r.json(), list)

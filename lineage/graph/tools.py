@@ -154,6 +154,47 @@ async def who_knows(g, topic: str, as_of: date | None = None) -> Fragment:
     return f
 
 
+_LABELS = {"pep": "PEP", "person": "Person", "decision": "Decision", "area": "Area", "pr": "PR", "thread": "Thread"}
+
+
+async def _resolve(g, ref: str) -> str | None:
+    import re
+
+    ref = ref.strip()
+    if ":" in ref and ref.split(":", 1)[0] in _LABELS:
+        return ref
+    m = re.fullmatch(r"(?i)pep[\s-]*(\d{1,4})", ref)
+    if m:
+        return ids.pep(int(m.group(1)))
+    for cypher in (Q.RESOLVE_AREA, Q.RESOLVE_PERSON):
+        rows = await ro(g, cypher, {"q": ref})
+        if rows:
+            return rows[0]["id"]
+    return None
+
+
+async def connection(g, a: str, b: str) -> Fragment:
+    """Shortest chain of people, proposals and decisions linking two things."""
+    ra, rb = await _resolve(g, a), await _resolve(g, b)
+    if not ra or not rb:
+        return Fragment(meta={"summary": f"{a if not ra else b} not found in the graph.", "path": []})
+    cypher = Q._SHORTEST.replace("{la}", _LABELS[ra.split(":")[0]]).replace("{lb}", _LABELS[rb.split(":")[0]])
+    rows = await ro(g, cypher, {"a": ra, "b": rb})
+    if not rows:
+        return Fragment(meta={"summary": f"No connection within 6 steps between {ra} and {rb}.", "path": []})
+    nodes, rels = rows[0]["nodes"], rows[0]["rels"]
+    f = Fragment(nodes=[{"id": n["id"], "label": n["label"], "props": {"name": n["name"]}} for n in nodes],
+                 edges=[{"src": r["src"], "dst": r["dst"], "type": r["type"], "props": {}} for r in rels])
+    names = {n["id"]: n["name"] or n["id"] for n in nodes}
+    steps = []
+    for n_from, n_to, r in zip(nodes, nodes[1:], rels):
+        arrow = f"—{r['type'].lower()}→" if r["src"] == n_from["id"] else f"←{r['type'].lower()}—"
+        steps.append(f"{arrow} {names[n_to['id']]} [{n_to['id']}]")
+    f.meta = {"path": [n["id"] for n in nodes],
+              "summary": f"{names[nodes[0]['id']]} [{nodes[0]['id']}] " + " ".join(steps) + f" ({len(rels)} steps)"}
+    return f
+
+
 async def related_peps(g, pep: int, hops: int = 2) -> Fragment:
     cypher = {1: Q.RELATED_1, 2: Q.RELATED_2}.get(max(1, min(hops, 3)), Q.RELATED_3)
     f = _fragment(await ro(g, cypher, {"id": ids.pep(pep)}))
@@ -172,6 +213,8 @@ TOOL_SPECS = [
      "input_schema": {"type": "object", "properties": {"topic": {"type": "string"}}, "required": ["topic"]}},
     {"name": "related_peps", "description": "PEPs connected to one PEP by references, supersedes or requires links (1-3 hops).",
      "input_schema": {"type": "object", "properties": {"pep": {"type": "integer"}, "hops": {"type": "integer", "default": 2}}, "required": ["pep"]}},
+    {"name": "connection", "description": "Shortest chain linking two things in the graph — people, PEPs, modules (e.g. a='Guido van Rossum', b='PEP 695'). Best tool for HOW IS X CONNECTED TO Y questions.",
+     "input_schema": {"type": "object", "properties": {"a": {"type": "string"}, "b": {"type": "string"}}, "required": ["a", "b"]}},
     {"name": "submit_answer", "description": "Finish. Give the answer text, the ids you cite (ONLY ids that appeared in tool results, e.g. 'pep:649', 'person:gpshead', 'decision:pep:649:accept'), and 1-3 short beliefs you concluded, each with the ids it rests on and a confidence 0-1.",
      "input_schema": {"type": "object", "properties": {
          "text": {"type": "string"},
