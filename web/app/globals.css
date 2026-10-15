@@ -121,7 +121,18 @@ a { color: var(--cyan); }
 .suggest button:hover { border-left-color: var(--cyan); color: var(--cyan); }
 .q { font-family: var(--display); font-size: var(--step-1); line-height: 1.35; margin: 0; }
 .a { margin: 0.5rem 0 0; }
-.a.stale { color: var(--ink-faint); background: var(--hatch); text-decoration: line-through; text-decoration-color: rgba(194, 39, 61, 0.55); }
+/* un-learning: the answer stays readable, struck through in red ink like an archivist's correction */
+.struck {
+  color: var(--ink-soft);
+  background: linear-gradient(var(--stamp), var(--stamp)) no-repeat 0 58% / 100% 1.5px;
+  -webkit-box-decoration-break: clone; box-decoration-break: clone;
+  animation: strike 900ms cubic-bezier(.6, 0, .3, 1) both;
+}
+@keyframes strike { from { background-size: 0% 1.5px; } to { background-size: 100% 1.5px; } }
+.margin-note { margin: 0.45rem 0 0; border-left: 2px solid var(--stamp); padding-left: 0.65rem; font-size: var(--step--1); font-style: italic; color: var(--stamp); line-height: 1.5; }
+.margin-note .typed { font-style: normal; }
+.linkish.stamp-link { color: var(--stamp); font-style: italic; }
+@media (prefers-reduced-motion: reduce) { .struck { animation: none; } }
 .a-note { font-size: var(--step--1); color: var(--stamp); margin-top: 0.35rem; }
 .chips { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.6rem; }
 .chip {

@@ -17,7 +17,7 @@ const EMPTY: Fragment = { nodes: [], edges: [] };
 const n = (k: number, word: string) => `${k} ${word}${k === 1 ? "" : "s"}`;
 
 type ActionItem = { id: string; status: "pending" | "done" | "blocked"; reason?: string };
-type Entry = { kind: "qa"; q: string; asOf: string | null; result?: AskResult; error?: string; actions: ActionItem[]; stale?: string;
+type Entry = { kind: "qa"; q: string; asOf: string | null; result?: AskResult; error?: string; actions: ActionItem[]; stale?: { note: string; at: string };
   frag?: Fragment; prev?: Fragment } // this answer's own graph; the graph it replaced (new topic)
   | { kind: "steward"; text: string; details?: string };
 
@@ -157,13 +157,19 @@ export default function Workspace() {
       const rep: StewardReport = await api.apply(slug);
       const h = rep.agents.historian ?? { beliefs: [], answers: [], actions_blocked: [] };
       const staleIds = [...rep.ripple.hard, ...rep.ripple.soft, ...rep.ripple.chunks, ...h.answers, ...h.actions_blocked];
+      const ev = events.find((x) => x.slug === slug);
+      const proposal = (id: string) => `PEP ${id.split(":")[1]}`;
+      const note = ev && ev.kind === "supersede" && ev.by?.length
+        ? `${proposal(ev.pep)} was replaced by ${ev.by.map((b) => `PEP ${b}`).join(" and ")}.`
+        : rep.summary;
+      const staleNote = { note, at: ev?.at ?? "" };
       setFragment((f) => mergeFragments(f, rep.paths));
       setStale((s) => new Set([...s, ...staleIds]));
       setWave({ origin: rep.changed, stale: staleIds, key: Date.now() });
       setEntries((xs) => [
         ...xs.map((e) => e.kind === "qa" ? {
           ...e,
-          stale: e.result?.answer_id && h.answers.includes(e.result.answer_id) ? rep.summary : e.stale,
+          stale: e.result?.answer_id && h.answers.includes(e.result.answer_id) ? staleNote : e.stale,
           actions: e.actions.map((a) => (h.actions_blocked.includes(a.id) ? { ...a, status: "blocked" as const, reason: "Blocked by the Steward: it rests on knowledge that just changed. Run it to see why." } : a)),
         } : e),
         { kind: "steward", text: rep.plain ?? rep.summary, details: `${rep.summary} I re-checked everything built on ${rep.changed.join(", ")}: ${n(h.answers.length, "answer")} and ${n(h.beliefs.length, "belief")} no longer hold, ${n(h.actions_blocked.length, "queued action")} on hold, and ${n(rep.fixtasks.length, "proposal")} that cite it now have a review task.` },
@@ -239,8 +245,13 @@ export default function Workspace() {
                   {e.error && <p className="a-note">{e.error}</p>}
                   {e.result && (
                     <>
-                      <p className={`a ${e.stale ? "stale" : ""}`}>{e.result.text}</p>
-                      {e.stale && <p className="a-note">No longer current: {e.stale}</p>}
+                      <p className="a">{e.stale ? <span className="struck">{e.result.text}</span> : e.result.text}</p>
+                      {e.stale && (
+                        <p className="margin-note">
+                          No longer true{e.stale.at && <> as of <span className="typed">{e.stale.at}</span></>}. {e.stale.note}{" "}
+                          <button className="linkish stamp-link" disabled={busy} onClick={() => ask(e.q, null)}>Ask again with today&rsquo;s facts</button>
+                        </p>
+                      )}
                       <div className="chips">
                         {e.result.citations.map((c) => (
                           <Tip key={c} text={stale.has(c) ? "No longer current. Click to see it in the graph." : "Evidence for this answer. Click to show it in the graph and open its card."}>
