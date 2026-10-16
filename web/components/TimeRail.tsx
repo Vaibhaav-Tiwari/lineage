@@ -75,8 +75,11 @@ export default function TimeRail({
           const a = pct(new Date(span.from)), b = pct(new Date(span.to));
           const years = span.from.slice(0, 4) === span.to.slice(0, 4) ? span.from.slice(0, 4) : `${span.from.slice(0, 4)} to ${span.to.slice(0, 4)}`;
           return (
-            <span className="rail-span" style={{ left: `${a}%`, width: `max(6px, ${b - a}%)` }}
-                  title={`The evidence on the graph covers ${years}`} aria-label={`The evidence on the graph covers ${years}`} role="img" />
+            <span className="rail-span" style={{ left: `${a}%`, width: `max(6px, ${b - a}%)` }}>
+              <Tip side="bottom" text={`The evidence on the graph covers ${years}: from the earliest proposal or decision it rests on (${span.from}) to the latest (${span.to}).`}>
+                <span className="rail-span-hit" tabIndex={0} aria-label={`The evidence on the graph covers ${years}`} />
+              </Tip>
+            </span>
           );
         })()}
         <div className="rail-line" />
@@ -102,7 +105,8 @@ export default function TimeRail({
             </span>
             {open === e.slug && (
               <div className="pin-pop" role="dialog">
-                <p><strong>{e.at}</strong> — {e.summary}</p>
+                <p className="pin-when">{fmtDay(e.at)}{e.applied ? ", applied" : ""}</p>
+                <p>{e.summary}</p>
                 {e.applied ? (
                   <>
                     <p className="typed">Applied. Everything built on {e.pep} was re-checked.</p>

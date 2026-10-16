@@ -59,6 +59,7 @@ a { color: var(--cyan); }
 
 /* ---------- time rail: a ruler in one row (status | ruler | reset) ---------- */
 .rail {
+  position: relative; z-index: 30; /* its pop-ups (change card, reset confirm, tooltips) sit above the workspace and its toolbar */
   display: grid; grid-template-columns: 8.5rem 1fr auto; gap: 1.4rem; align-items: center;
   padding: 0 1.5rem; border-bottom: 1px solid var(--rule); font-size: var(--step--1); color: var(--ink-soft);
 }
@@ -91,8 +92,11 @@ a { color: var(--cyan); }
 /* the band: which years the evidence on the graph comes from */
 .rail-span {
   position: absolute; top: 19px; height: 15px; background: var(--cyan-wash); border-left: 1px solid rgba(47, 93, 140, 0.45);
-  border-right: 1px solid rgba(47, 93, 140, 0.45); transition: left 500ms ease, width 500ms ease; cursor: help;
+  border-right: 1px solid rgba(47, 93, 140, 0.45); transition: left 500ms ease, width 500ms ease;
 }
+.rail-span > .tip-wrap { display: block; width: 100%; height: 100%; }
+.rail-span-hit { display: block; width: 100%; height: 100%; cursor: help; }
+.rail-span-hit:focus-visible { outline: 2px solid var(--cyan); outline-offset: 1px; }
 /* the dial: a brass marker, so "when" is unmistakably the thing you can move */
 .rail-handle {
   position: absolute; top: 13px; width: 3px; height: 22px; transform: translateX(-1.5px); cursor: ew-resize;
@@ -107,9 +111,13 @@ a { color: var(--cyan); }
 .rail-handle:focus-visible::after { box-shadow: 0 0 0 3px var(--paper), 0 0 0 5px var(--cyan); }
 .pin-pop {
   position: absolute; top: 40px; transform: translateX(-90%); width: 300px; z-index: 5;
-  background: var(--card); border: 1px solid var(--rule); padding: 0.9rem 1rem; box-shadow: 0 8px 28px rgba(24, 35, 58, 0.14);
+  background: var(--card); border: 1px solid var(--ink); padding: 0.8rem 0.95rem; box-shadow: 0 6px 20px rgba(24, 35, 58, 0.12);
+  font-size: var(--step-0); color: var(--ink);
 }
-.pin-pop p { margin: 0 0 0.6rem; }
+.pin-pop p { margin: 0 0 0.6rem; line-height: 1.45; }
+.pin-pop .pin-when { margin: 0 0 0.25rem; font-style: italic; color: var(--stamp); font-size: var(--step--1); }
+.rail-pin:focus-visible { outline: none; }
+.rail-pin:focus-visible .head { box-shadow: 0 0 0 3px var(--paper), 0 0 0 5px var(--cyan); }
 
 /* ---------- main workspace ---------- */
 .workspace { display: grid; grid-template-columns: minmax(320px, 380px) 1fr minmax(300px, 340px); min-height: 0; }
