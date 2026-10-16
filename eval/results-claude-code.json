@@ -5,13 +5,13 @@
   "citation_recall": 1.0,
   "missing": [],
   "abstained": false,
-  "seconds": 15.6,
+  "seconds": 11.2,
   "tools": 1,
   "error": null,
   "tool_ms": [
    [
     "decision_path",
-    13.9
+    7.5
    ]
   ]
  },
@@ -21,13 +21,13 @@
   "citation_recall": 1.0,
   "missing": [],
   "abstained": false,
-  "seconds": 12.1,
+  "seconds": 9.6,
   "tools": 1,
   "error": null,
   "tool_ms": [
    [
     "decision_path",
-    17.0
+    22.7
    ]
   ]
  },
@@ -37,119 +37,7 @@
   "citation_recall": 1.0,
   "missing": [],
   "abstained": false,
-  "seconds": 12.4,
-  "tools": 1,
-  "error": null,
-  "tool_ms": [
-   [
-    "decision_path",
-    10.8
-   ]
-  ]
- },
- {
-  "q": "When was PEP 749 accepted, and who announced it?",
-  "correct": true,
-  "citation_recall": 1.0,
-  "missing": [],
-  "abstained": false,
-  "seconds": 11.9,
-  "tools": 1,
-  "error": null,
-  "tool_ms": [
-   [
-    "decision_path",
-    10.3
-   ]
-  ]
- },
- {
-  "q": "Who announced the acceptance of PEP 688?",
-  "correct": true,
-  "citation_recall": 1.0,
-  "missing": [],
-  "abstained": false,
-  "seconds": 12.9,
-  "tools": 1,
-  "error": null,
-  "tool_ms": [
-   [
-    "decision_path",
-    13.3
-   ]
-  ]
- },
- {
-  "q": "Who announced that PEP 692 was accepted?",
-  "correct": true,
-  "citation_recall": 1.0,
-  "missing": [],
-  "abstained": false,
-  "seconds": 9.1,
-  "tools": 1,
-  "error": null,
-  "tool_ms": [
-   [
-    "decision_path",
-    11.0
-   ]
-  ]
- },
- {
-  "q": "Who accepted PEP 740?",
-  "correct": true,
-  "citation_recall": 1.0,
-  "missing": [],
-  "abstained": false,
-  "seconds": 12.2,
-  "tools": 1,
-  "error": null,
-  "tool_ms": [
-   [
-    "decision_path",
-    14.2
-   ]
-  ]
- },
- {
-  "q": "Who wrote PEP 572, assignment expressions?",
-  "correct": true,
-  "citation_recall": 1.0,
-  "missing": [],
-  "abstained": false,
-  "seconds": 12.2,
-  "tools": 1,
-  "error": null,
-  "tool_ms": [
-   [
-    "decision_path",
-    7.3
-   ]
-  ]
- },
- {
-  "q": "Who are the authors of PEP 484, type hints?",
-  "correct": true,
-  "citation_recall": 1.0,
-  "missing": [],
-  "abstained": false,
-  "seconds": 15.7,
-  "tools": 1,
-  "error": null,
-  "tool_ms": [
-   [
-    "decision_path",
-    15.1
-   ]
-  ]
- },
- {
-  "q": "Which PEP superseded PEP 241?",
-  "correct": true,
-  "citation_recall": 1.0,
-  "missing": [],
-  "abstained": false,
-  "seconds": 10.9,
+  "seconds": 13.9,
   "tools": 1,
   "error": null,
   "tool_ms": [
@@ -160,18 +48,130 @@
   ]
  },
  {
-  "q": "Which PEP superseded PEP 5, the guidelines for language evolution?",
+  "q": "When was PEP 749 accepted, and who announced it?",
   "correct": true,
   "citation_recall": 1.0,
   "missing": [],
   "abstained": false,
-  "seconds": 11.4,
+  "seconds": 15.1,
   "tools": 1,
   "error": null,
   "tool_ms": [
    [
     "decision_path",
-    8.9
+    18.7
+   ]
+  ]
+ },
+ {
+  "q": "Who announced the acceptance of PEP 688?",
+  "correct": true,
+  "citation_recall": 1.0,
+  "missing": [],
+  "abstained": false,
+  "seconds": 8.9,
+  "tools": 1,
+  "error": null,
+  "tool_ms": [
+   [
+    "decision_path",
+    17.9
+   ]
+  ]
+ },
+ {
+  "q": "Who announced that PEP 692 was accepted?",
+  "correct": true,
+  "citation_recall": 1.0,
+  "missing": [],
+  "abstained": false,
+  "seconds": 11.3,
+  "tools": 1,
+  "error": null,
+  "tool_ms": [
+   [
+    "decision_path",
+    15.1
+   ]
+  ]
+ },
+ {
+  "q": "Who accepted PEP 740?",
+  "correct": true,
+  "citation_recall": 1.0,
+  "missing": [],
+  "abstained": false,
+  "seconds": 10.1,
+  "tools": 1,
+  "error": null,
+  "tool_ms": [
+   [
+    "decision_path",
+    17.7
+   ]
+  ]
+ },
+ {
+  "q": "Who wrote PEP 572, assignment expressions?",
+  "correct": true,
+  "citation_recall": 1.0,
+  "missing": [],
+  "abstained": false,
+  "seconds": 6.5,
+  "tools": 1,
+  "error": null,
+  "tool_ms": [
+   [
+    "decision_path",
+    8.2
+   ]
+  ]
+ },
+ {
+  "q": "Who are the authors of PEP 484, type hints?",
+  "correct": true,
+  "citation_recall": 1.0,
+  "missing": [],
+  "abstained": false,
+  "seconds": 6.8,
+  "tools": 1,
+  "error": null,
+  "tool_ms": [
+   [
+    "decision_path",
+    6.2
+   ]
+  ]
+ },
+ {
+  "q": "Which PEP superseded PEP 241?",
+  "correct": true,
+  "citation_recall": 1.0,
+  "missing": [],
+  "abstained": false,
+  "seconds": 9.9,
+  "tools": 1,
+  "error": null,
+  "tool_ms": [
+   [
+    "decision_path",
+    12.8
+   ]
+  ]
+ },
+ {
+  "q": "Which PEP superseded PEP 5, the guidelines for language evolution?",
+  "correct": true,
+  "citation_recall": 1.0,
+  "missing": [],
+  "abstained": false,
+  "seconds": 12.1,
+  "tools": 1,
+  "error": null,
+  "tool_ms": [
+   [
+    "decision_path",
+    15.7
    ]
   ]
  },
@@ -181,13 +181,13 @@
   "citation_recall": 1.0,
   "missing": [],
   "abstained": false,
-  "seconds": 10.3,
+  "seconds": 9.9,
   "tools": 1,
   "error": null,
   "tool_ms": [
    [
     "decision_path",
-    10.3
+    12.9
    ]
   ]
  },
@@ -197,13 +197,13 @@
   "citation_recall": 1.0,
   "missing": [],
   "abstained": false,
-  "seconds": 14.8,
+  "seconds": 8.3,
   "tools": 1,
   "error": null,
   "tool_ms": [
    [
     "decision_path",
-    9.7
+    11.8
    ]
   ]
  },
@@ -213,13 +213,13 @@
   "citation_recall": 1.0,
   "missing": [],
   "abstained": false,
-  "seconds": 9.4,
+  "seconds": 7.6,
   "tools": 1,
   "error": null,
   "tool_ms": [
    [
     "decision_path",
-    8.7
+    10.4
    ]
   ]
  },
@@ -229,13 +229,13 @@
   "citation_recall": 1.0,
   "missing": [],
   "abstained": false,
-  "seconds": 17.5,
+  "seconds": 16.0,
   "tools": 1,
   "error": null,
   "tool_ms": [
    [
     "who_knows",
-    12.9
+    12.5
    ]
   ]
  },
@@ -245,13 +245,13 @@
   "citation_recall": 1.0,
   "missing": [],
   "abstained": false,
-  "seconds": 17.6,
+  "seconds": 14.1,
   "tools": 1,
   "error": null,
   "tool_ms": [
    [
     "who_knows",
-    7.1
+    7.4
    ]
   ]
  },
@@ -261,17 +261,13 @@
   "citation_recall": 1.0,
   "missing": [],
   "abstained": false,
-  "seconds": 10.8,
-  "tools": 2,
+  "seconds": 11.5,
+  "tools": 1,
   "error": null,
   "tool_ms": [
    [
-    "pep_timeline",
-    11.5
-   ],
-   [
     "decision_path",
-    8.9
+    12.2
    ]
   ]
  },
@@ -281,13 +277,13 @@
   "citation_recall": null,
   "missing": [],
   "abstained": true,
-  "seconds": 14.7,
+  "seconds": 8.9,
   "tools": 1,
   "error": null,
   "tool_ms": [
    [
     "search",
-    48.2
+    60.0
    ]
   ]
  },
@@ -297,10 +293,15 @@
   "citation_recall": null,
   "missing": [],
   "abstained": true,
-  "seconds": 11.5,
-  "tools": 0,
+  "seconds": 9.7,
+  "tools": 1,
   "error": null,
-  "tool_ms": []
+  "tool_ms": [
+   [
+    "search",
+    59.3
+   ]
+  ]
  },
  {
   "q": "Which JavaScript framework did the Steering Council pick for the python.org website redesign?",
@@ -308,17 +309,13 @@
   "citation_recall": null,
   "missing": [],
   "abstained": true,
-  "seconds": 11.8,
-  "tools": 2,
+  "seconds": 9.3,
+  "tools": 1,
   "error": null,
   "tool_ms": [
    [
     "search",
-    27.7
-   ],
-   [
-    "search",
-    27.8
+    53.3
    ]
   ]
  }

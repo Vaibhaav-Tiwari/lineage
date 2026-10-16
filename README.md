@@ -89,6 +89,7 @@ flowchart LR
 | **Two time axes** | *Valid time*: what was true when (proposal status over time, commit history since 2015). *Record time*: when Lineage learned it (beliefs keep `stale_at`), so you can see what the agent believed at any moment. |
 | **Counterfactuals on a `GRAPH.COPY` fork** | Algorithm procedures run over whole label sets and can't skip a node, so "what if X left" copies the graph, deletes X in the copy, re-runs them and drops the copy. |
 | **Parse with code, use the LLM last** | Structured sources are parsed deterministically, so provenance is exact. Claude only phrases answers from tool results, and every citation is checked against ids the tools returned. |
+| **The graph answers first, the model second** | Claude needs seconds per round trip; the graph needs milliseconds. `/ask/stream` sends each graph lookup as it happens, then an instant graph-only answer with its evidence graph (not saved to memory), then Claude's answer, which replaces it. Claude is handed that lookup in its prompt instead of making it, which saves a round trip, and if it fails (for example a usage limit) the graph-only answer stands. |
 | **The database enforces the schema** | Unique ids on every record type, and `MANDATORY` constraints (a proposal must have a number and title, a decision a kind). |
 
 ---
@@ -253,7 +254,7 @@ against expected graph ids. No LLM judge.
 | graph-only (no LLM) | **20/20** | **100%** | **3/3** | **100% / 100%** |
 | Claude Opus 5.5 (via Claude Code) | **20/20** | **100%** | **3/3** | **100% / 100%** |
 
-Claude answers take a median of 12.1 s (usually one graph tool call). Re-running the eval on 16 Oct caught a
+Claude answers take a median of 9.9 s, down from 12.1 s once Claude was handed the obvious graph lookup up front (the user sees the graph-only answer within about 50 ms meanwhile; see *Key design decisions*). Re-running the eval on 16 Oct caught a
 regression: after answers gained footnotes, Claude stopped citing the proposal itself and citation recall fell to 86%.
 A one-line prompt fix brought it back to 100%.
 

@@ -62,7 +62,13 @@ async def test_claude_code_errors_become_an_explained_abstention(db, monkeypatch
     monkeypatch.setattr(claude_agent_sdk, "query", boom)
     cg, ag, ug = await _graphs(db)
     try:
+        # the graph can answer this one on its own: the graph-only answer stands in
         r = await ask("Who announced PEP 102?", company_g=cg, agent_g=ag, user_g=None, llm=ClaudeCodeLLM(), embedder=FakeEmbedder())
+        assert not r.abstained and "Bob" in r.text
+        assert "weekly limit" in r.usage["error"] and r.usage["fallback"] == "graph-only"
+        # it can't answer this one: the abstention says the problem is not the question
+        r = await ask("Why do people argue about the old way?", company_g=cg, agent_g=ag, user_g=None,
+                      llm=ClaudeCodeLLM(), embedder=FakeEmbedder())
         assert r.abstained and "weekly limit" in r.usage["error"]
         assert r.miss["kind"] == "system" and "not about your question" in r.text
     finally:

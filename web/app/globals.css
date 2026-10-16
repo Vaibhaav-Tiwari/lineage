@@ -198,6 +198,10 @@ a { color: var(--cyan); }
 }
 .asker .asof { font-size: var(--step--1); color: var(--ink-soft); margin-top: 0.35rem; }
 .working { font-style: italic; color: var(--ink-soft); }
+.working p { margin: 0; }
+.working .typed, .draft-note .typed { font-style: normal; font-variant-numeric: tabular-nums; }
+.steps { margin: 0.35rem 0 0; padding-left: 1.1rem; font-size: var(--step--1); color: var(--ink-faint); display: grid; gap: 0.15rem; }
+.draft-note { font-style: italic; }
 
 /* ---------- index card ---------- */
 .card {

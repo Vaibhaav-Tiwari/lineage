@@ -40,7 +40,46 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
+export type AskStep = AskResult["tool_trace"][number];
+export type AskEvent = { type: "step"; step: AskStep } | { type: "draft" | "final"; result: AskResult } | { type: "error"; message: string };
+
+/** Newline-delimited JSON: complete lines become events; a trailing partial line is kept for the next chunk. */
+export function splitEvents(buf: string): { events: AskEvent[]; rest: string } {
+  const lines = buf.split("\n");
+  const rest = lines.pop() ?? "";
+  return { events: lines.filter((l) => l.trim()).map((l) => JSON.parse(l) as AskEvent), rest };
+}
+
+/** /ask/stream: reports each graph lookup and the instant draft as they arrive; resolves with the final answer. */
+async function askStream(question: string, user_id: string, as_of: string | null, context: Record<string, string>[],
+                         focus: string | null, onEvent: (e: AskEvent) => void): Promise<AskResult> {
+  const r = await fetch(`${API}/ask/stream`, { method: "POST", headers: { "content-type": "application/json" },
+                                               body: JSON.stringify({ question, user_id, as_of, context, focus }) });
+  if (!r.ok || !r.body) {
+    const body = await r.json().catch(() => ({}));
+    throw Object.assign(new Error(typeof body?.detail === "string" ? body.detail : `HTTP ${r.status}`), { status: r.status, body });
+  }
+  const reader = r.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+  let final: AskResult | null = null;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    const { events, rest } = splitEvents(buf + decoder.decode(value, { stream: true }));
+    buf = rest;
+    for (const e of events) {
+      if (e.type === "error") throw new Error(e.message);
+      if (e.type === "final") final = e.result;
+      onEvent(e);
+    }
+  }
+  if (!final) throw new Error("The archive stopped before it finished answering. Try asking again.");
+  return final;
+}
+
 export const api = {
+  askStream,
   ask: (question: string, user_id: string, as_of: string | null, context: Record<string, string>[] = [], focus: string | null = null) =>
     call<AskResult>("/ask", { method: "POST", body: JSON.stringify({ question, user_id, as_of, context, focus }) }),
   node: (id: string) => call<any>(`/nodes/${encodeURIComponent(id)}`),

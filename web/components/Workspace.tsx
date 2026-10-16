@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import { api, AskResult, capFanout, EventRow, expandMore, Fragment, GNode, mergeFragments, sharesTopic, StewardReport } from "@/lib/api";
+import { api, AskResult, AskStep, capFanout, EventRow, expandMore, Fragment, GNode, mergeFragments, sharesTopic, StewardReport } from "@/lib/api";
 import TimeRail from "./TimeRail";
 import AnswerText from "./AnswerText";
 import IndexCard from "./IndexCard";
@@ -37,7 +37,8 @@ const ACTIONS: Record<ActionKind, { queue: string; what: string; node: string }>
   ask_owner_review: { queue: "Queue: ask the owners to confirm", what: "Ask the owners of this part of Python to confirm it", node: "Ask owners" },
 };
 type Entry = { kind: "qa"; q: string; asOf: string | null; result?: AskResult; error?: string; actions: ActionItem[]; stale?: { note: string; at: string };
-  frag?: Fragment; prev?: Fragment } // this answer's own graph; the graph it replaced (new topic)
+  frag?: Fragment; prev?: Fragment; // this answer's own graph; the graph it replaced (new topic)
+  steps?: AskStep[]; draft?: boolean; startedAt?: number } // live lookups; result is the instant graph-only draft
   | { kind: "steward"; text: string; details?: string };
 
 const SUGGESTIONS = [
@@ -80,6 +81,13 @@ export default function Workspace() {
   const [graphs, setGraphs] = useState<{ graph: string; mb: number }[]>([]);
   const [online, setOnline] = useState(true);
   const [lastMs, setLastMs] = useState<number | null>(null);
+  const [now, setNow] = useState(0); // set when a question is asked: no clock read during render
+  useEffect(() => { // a ticking clock while an answer is on its way, so a slow model never looks frozen
+    if (!busy) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [busy]);
+  const waited = (e: { startedAt?: number }) => (e.startedAt ? Math.max(0, Math.round((now - e.startedAt) / 1000)) : 0);
 
   const refresh = useCallback(() => {
     api.events().then(setEvents).catch(() => setOnline(false));
@@ -123,33 +131,48 @@ export default function Workspace() {
     const at = when === undefined ? asOf : when; // a "no answer" button can move the dial
     if (when !== undefined) setAsOf(when);
     const i = entries.length;
-    setEntries((xs) => [...xs, { kind: "qa", q, asOf: at, actions: [] }]);
+    setEntries((xs) => [...xs, { kind: "qa", q, asOf: at, actions: [], steps: [], startedAt: Date.now() }]);
     setQuestion("");
+    setNow(Date.now());
     setBusy(true);
+    // a follow-up on the same proposal or module builds on the graph; a new topic starts a fresh one.
+    // A what-if preview on the canvas is not part of the conversation: answers build on the graph behind it.
+    // The draft and the final answer are both placed against the graph as it was when the question was asked.
+    const base = previewNote ? beforePreview : fragment;
+    const baseCited = cited;
+    let placed = false;
+    const place = (r: AskResult) => {
+      if (previewNote) { setPreviewNote(null); setBeforePreview(EMPTY); }
+      let mine = r.evidence;
+      if (r.answer_id) {
+        const answer: GNode = { id: r.answer_id, label: "Answer", props: { text: r.text } };
+        mine = mergeFragments(r.evidence, {
+          nodes: [answer],
+          edges: r.citations.filter((c) => r.evidence.nodes.some((n) => n.id === c)).map((c) => ({ src: r.answer_id!, dst: c, type: "DERIVED_FROM" })),
+        });
+      }
+      const own = capFanout(mine, new Set([...r.citations, ...(r.answer_id ? [r.answer_id] : [])]));
+      const sameTopic = base.nodes.length === 0 || sharesTopic(base, r.evidence);
+      setFragment(sameTopic ? mergeFragments(base, own) : own);
+      setCited(new Set(sameTopic ? [...baseCited, ...r.citations] : r.citations));
+      if (!sameTopic) setPath([]);
+      patchEntry(i, (e) => ({ ...e, frag: own, prev: sameTopic ? undefined : base }));
+      setSelected(r.citations.find((c) => c.startsWith("pep:")) ?? r.citations[0] ?? null);
+      placed = true;
+    };
     try {
       const context: Record<string, string>[] = entries.slice(-4).map((e): Record<string, string> =>
         e.kind === "steward" ? { note: `Steward: ${e.text}` } : { q: e.q, a: e.result?.text ?? "" });
-      const r = await api.ask(q, UID, at, context, selected);
-      patchEntry(i, (e) => ({ ...e, result: r }));
+      const r = await api.askStream(q, UID, at, context, selected, (ev) => {
+        if (ev.type === "step") patchEntry(i, (e) => ({ ...e, steps: [...(e.steps ?? []), ev.step] }));
+        if (ev.type === "draft") { patchEntry(i, (e) => ({ ...e, result: ev.result, draft: true })); place(ev.result); }
+      });
+      patchEntry(i, (e) => ({ ...e, result: r, draft: false }));
       setLastMs(r.tool_trace.reduce((s, t) => s + t.ms, 0));
-      if (!r.abstained && r.answer_id) {
-        const answer: GNode = { id: r.answer_id, label: "Answer", props: { text: r.text } };
-        const memory: Fragment = {
-          nodes: [answer],
-          edges: r.citations.filter((c) => r.evidence.nodes.some((n) => n.id === c)).map((c) => ({ src: r.answer_id!, dst: c, type: "DERIVED_FROM" })),
-        };
-        const own = capFanout(mergeFragments(r.evidence, memory), new Set([...r.citations, r.answer_id]));
-        // a follow-up on the same proposal or module builds on the graph; a new topic starts a fresh one
-        // a what-if preview on the canvas is not part of the conversation: answers build on the graph behind it
-        const base = previewNote ? beforePreview : fragment;
-        if (previewNote) { setPreviewNote(null); setBeforePreview(EMPTY); }
-        const sameTopic = base.nodes.length === 0 || sharesTopic(base, r.evidence);
-        const before = base;
-        setFragment(sameTopic ? mergeFragments(base, own) : own);
-        setCited((s) => new Set(sameTopic ? [...s, ...r.citations] : r.citations));
-        if (!sameTopic) setPath([]);
-        patchEntry(i, (e) => ({ ...e, frag: own, prev: sameTopic ? undefined : before }));
-        setSelected(r.citations.find((c) => c.startsWith("pep:")) ?? r.citations[0] ?? null);
+      if (!r.abstained && r.answer_id) place(r);
+      else if (placed) { // the model declined what the draft showed: put the graph back
+        setFragment(base); setCited(baseCited);
+        patchEntry(i, (e) => ({ ...e, frag: undefined, prev: undefined }));
       }
     } catch (err: any) {
       patchEntry(i, (e) => ({ ...e, error: err.message ?? "The archive did not answer." }));
@@ -308,7 +331,14 @@ export default function Workspace() {
                 <div key={i}>
                   <p className="q">{e.q}</p>
                   {e.asOf && <div className="trace">as of {e.asOf}</div>}
-                  {!e.result && !e.error && <p className="a working">Consulting the archive…</p>}
+                  {!e.result && !e.error && (
+                    <div className="a working" aria-live="polite">
+                      <p>Consulting the archive… <span className="typed">{waited(e)} s</span></p>
+                      {!!e.steps?.length && (
+                        <ol className="steps">{e.steps.map((s, k) => <li key={k}>{stepLabel(s)}{s.found?.length ? `: ${n(s.found.length, "item")} found` : ""}</li>)}</ol>
+                      )}
+                    </div>
+                  )}
                   {e.error && <p className="a-note">{e.error}</p>}
                   {e.result && (
                     <>
@@ -321,6 +351,11 @@ export default function Workspace() {
                         </p>
                       )}
                       </AnswerText>
+                      {e.draft && (
+                        <p className="trace draft-note" aria-live="polite">
+                          A quick answer straight from the graph. Claude is writing a fuller one… <span className="typed">{waited(e)} s</span>
+                        </p>
+                      )}
                       {e.result.miss && e.result.miss.actions.length > 0 && (
                         <div className="miss-actions">
                           {e.result.miss.actions.map((a) => (

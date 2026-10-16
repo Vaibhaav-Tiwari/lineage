@@ -2,6 +2,7 @@
 graph evidence only, cites stable ids, abstains when no evidence path exists,
 and writes what it concluded into its own memory graph."""
 
+import asyncio
 import json
 import time
 from dataclasses import dataclass, field
@@ -88,9 +89,11 @@ class ToolSession:
     what was seen (for citation checks) and what was submitted. Every LLM
     backend drives the same session, so the rules are identical everywhere."""
 
-    def __init__(self, company_g, embedder, as_of: date | None, max_calls: int = MAX_TOOL_CALLS):
+    def __init__(self, company_g, embedder, as_of: date | None, max_calls: int = MAX_TOOL_CALLS, on_step=None):
         self.company_g, self.embedder, self.as_of, self.max_calls = company_g, embedder, as_of, max_calls
         self.union, self.trace, self.used, self.submitted = Fragment(), [], 0, None
+        self.results: list[dict] = []  # what each tool returned, to hand a prefetch to the model
+        self.on_step = on_step         # called with each trace entry as it happens (streaming)
 
     async def call(self, name: str, inp: dict) -> tuple[str, bool]:
         if name == "submit_answer":
@@ -111,6 +114,9 @@ class ToolSession:
             content, err = f"Error: {e}", str(e)
         self.trace.append({"name": name, "input": inp, "ms": round((time.perf_counter() - t0) * 1000, 1),
                            "found": found, "summary": summary, **({"error": err} if err else {})})
+        self.results.append({"name": name, "input": inp, "content": content})
+        if self.on_step:
+            self.on_step(self.trace[-1])
         return content, err is not None
 
 
@@ -168,16 +174,72 @@ def _normalise(question: str) -> str:
     return f"Tell me about PEP {int(m.group(1))}." if m else question
 
 
-async def ask(question: str, *, company_g, agent_g, user_g, llm, embedder, as_of: date | None = None,
-              context: list[dict] | None = None, focus: str | None = None) -> AskResult:
+def _with_prefetch(prompt: str, results: list[dict]) -> str:
+    """Hand the model the lookups already made, so it can answer in one turn. The question stays last."""
+    done = "\n\n".join(f"{r['name']}({json.dumps(r['input'])}) returned:\n{r['content']}" for r in results)
+    head, question = prompt.rsplit("Question:", 1)
+    return (f"{head}Already looked up for you (these are tool results: cite their ids as usual):\n\n{done}\n\n"
+            "If this answers the question, call submit_answer now without further tool calls. "
+            f"Otherwise use the tools.\n\nQuestion:{question}")
+
+
+async def ask_stream(question: str, *, company_g, agent_g, user_g, llm, embedder, as_of: date | None = None,
+                     context: list[dict] | None = None, focus: str | None = None):
+    """Yields {"type": "step", "step"} for each graph lookup as it happens, {"type": "draft", "result"} (an
+    instant graph-only answer, not remembered) for backends that want a prefetch, then {"type": "final", "result"}.
+
+    A prefetching backend (Claude) is slow per turn, so the obvious lookup is made for it first: the graph-only
+    route (a named PEP's decision path, or a named module's owners), else a search for the question. If the model
+    then fails without answering, the graph-only draft becomes the answer."""
     question = _normalise(question)
     prompt = _prompt(question, as_of, context, focus)
-    session = ToolSession(company_g, embedder, as_of)
-    if hasattr(llm, "run_session"):  # backends that drive their own loop (Agent SDK, graph-only)
-        usage = await llm.run_session(SYSTEM, prompt, session, TOOL_SPECS)
-    else:
-        usage = await _manual_loop(llm, prompt, session)
-    return await _finish(question, session, company_g, agent_g, user_g, as_of, usage)
+    queue: asyncio.Queue = asyncio.Queue()
+    session = ToolSession(company_g, embedder, as_of, on_step=lambda s: queue.put_nowait({"type": "step", "step": s}))
+    draft = None
+    if getattr(llm, "prefetch", False):
+        from lineage.agents.backends import GraphOnlyLLM
+
+        await GraphOnlyLLM().run_session(SYSTEM, prompt, session, TOOL_SPECS)
+        draft, session.submitted = session.submitted, None
+        if not session.trace:
+            await session.call("search", {"query": question})
+        while not queue.empty():
+            yield queue.get_nowait()
+        if draft:
+            text, cited, beliefs = _resolve(session, draft)
+            if cited:
+                yield {"type": "draft", "result": AskResult(None, text, False, cited, _evidence(session.union, cited),
+                                                             beliefs, list(session.trace), {"backend": "graph-only"})}
+            else:
+                draft = None
+        prompt = _with_prefetch(prompt, session.results)
+
+    done = object()
+
+    async def run() -> dict:
+        try:
+            if hasattr(llm, "run_session"):  # backends that drive their own loop (Agent SDK, graph-only)
+                return await llm.run_session(SYSTEM, prompt, session, TOOL_SPECS)
+            return await _manual_loop(llm, prompt, session)
+        finally:
+            queue.put_nowait(done)
+
+    task = asyncio.create_task(run())
+    while (item := await queue.get()) is not done:
+        yield item
+    usage = task.result()
+    if session.submitted is None and draft:
+        session.submitted, usage = draft, {**usage, "fallback": "graph-only"}
+    yield {"type": "final", "result": await _finish(question, session, company_g, agent_g, user_g, as_of, usage)}
+
+
+async def ask(question: str, *, company_g, agent_g, user_g, llm, embedder, as_of: date | None = None,
+              context: list[dict] | None = None, focus: str | None = None) -> AskResult:
+    async for e in ask_stream(question, company_g=company_g, agent_g=agent_g, user_g=user_g, llm=llm,
+                              embedder=embedder, as_of=as_of, context=context, focus=focus):
+        if e["type"] == "final":
+            return e["result"]
+    raise RuntimeError("ask_stream ended without a final answer")
 
 
 def _renumber(text: str, original: list[str], kept: list[str]) -> str:
@@ -193,22 +255,26 @@ def _renumber(text: str, original: list[str], kept: list[str]) -> str:
     return re.sub(r"(\[\d+\])(?:\1)+", r"\1", out)  # [2][2] -> [2]
 
 
-async def _finish(question, session: ToolSession, company_g, agent_g, user_g, as_of, usage) -> AskResult:
-    submitted, seen = session.submitted, session.union.ids()
-    cited = [c for c in dict.fromkeys((submitted or {}).get("citations") or []) if c in seen]
-    if not submitted or not cited:
-        miss = await explain_miss(company_g, question, as_of, usage.get("error"))
-        return AskResult(None, miss["text"], True, [], Fragment(), [], session.trace, usage, miss)
+def _resolve(session: ToolSession, submitted: dict) -> tuple[str, list[str], list[dict]]:
+    """Keep only citations and belief evidence the tools actually returned; renumber the footnotes to match."""
+    seen = session.union.ids()
+    original = list(dict.fromkeys(submitted.get("citations") or []))
+    cited = [c for c in original if c in seen]
     beliefs = []
     for b in submitted.get("beliefs") or []:
         ev = [x for x in b.get("evidence") or [] if x in seen]
         if ev and b.get("text"):
             beliefs.append({"text": b["text"], "evidence": ev, "confidence": float(b.get("confidence", 0.5))})
-    original = list(dict.fromkeys((submitted or {}).get("citations") or []))
-    submitted["text"] = _renumber(submitted.get("text", ""), original, cited)
-    answer_id = await record_answer(agent_g, question, submitted.get("text", ""), cited, beliefs, as_of)
+    return _renumber(submitted.get("text", ""), original, cited), cited, beliefs
+
+
+async def _finish(question, session: ToolSession, company_g, agent_g, user_g, as_of, usage) -> AskResult:
+    text, cited, beliefs = _resolve(session, session.submitted) if session.submitted else ("", [], [])
+    if not cited:
+        miss = await explain_miss(company_g, question, as_of, usage.get("error"))
+        return AskResult(None, miss["text"], True, [], Fragment(), [], session.trace, usage, miss)
+    answer_id = await record_answer(agent_g, question, text, cited, beliefs, as_of)
     if user_g is not None:
         areas = [r["id"] for r in await ro(company_g, Q.AREAS_OF_PEPS, {"ids": [c for c in cited if c.startswith("pep:")]})]
         await record_episode(user_g, question, answer_id, areas)
-    return AskResult(answer_id, submitted.get("text", ""), False, cited, _evidence(session.union, cited),
-                     beliefs, session.trace, usage)
+    return AskResult(answer_id, text, False, cited, _evidence(session.union, cited), beliefs, session.trace, usage)

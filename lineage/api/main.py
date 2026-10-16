@@ -16,11 +16,12 @@ from typing import Callable
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, field_validator
 
 import json
 
-from lineage.agents.historian import ask
+from lineage.agents.historian import ask, ask_stream
 from lineage.agents.steward import apply_event, reset_event
 from lineage.db import create_acl_user, drop_acl_user, get_db, ro
 from lineage.graph import queries as Q
@@ -174,6 +175,27 @@ def create_app(prefix: str = "lineage", llm_factory: Callable | None = None, emb
                       llm=st.llm(), embedder=st.embedder, as_of=body.as_of,
                       context=body.context[-4:], focus=body.focus)
         return r.to_json()
+
+    @app.post("/ask/stream")
+    async def ask_stream_(body: AskBody):
+        """The same answer as /ask, as newline-delimited JSON events: each graph lookup as it happens, an
+        instant graph-only draft when the model is slow, then the final answer."""
+        hdb = st.historian_db
+        user_g = await st.user_graph(body.user_id, hdb) if body.user_id else None
+
+        async def events():
+            try:
+                async for e in ask_stream(body.question, company_g=hdb.select_graph(st.name("company")),
+                                          agent_g=hdb.select_graph(st.name("agent", "historian")), user_g=user_g,
+                                          llm=st.llm(), embedder=st.embedder, as_of=body.as_of,
+                                          context=body.context[-4:], focus=body.focus):
+                    if "result" in e:
+                        e = {**e, "result": e["result"].to_json()}
+                    yield json.dumps(e, default=str) + "\n"
+            except Exception as err:  # the stream has started: report in-band instead of a broken connection
+                yield json.dumps({"type": "error", "message": str(err)}) + "\n"
+
+        return StreamingResponse(events(), media_type="application/x-ndjson")
 
     @app.get("/beliefs")
     async def beliefs(agent: str = "historian", status: str | None = None, known_at: str | None = None):

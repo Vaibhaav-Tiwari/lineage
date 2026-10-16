@@ -32,6 +32,8 @@ def build_sdk_tools(session) -> list:
 
 
 class ClaudeCodeLLM:
+    prefetch = True  # each turn costs seconds: be handed the obvious lookup instead of making it
+
     def __init__(self, model: str | None = None, effort: str = "medium", max_turns: int = 14):
         self.model = model or settings().llm_model
         self.effort, self.max_turns = effort, max_turns
