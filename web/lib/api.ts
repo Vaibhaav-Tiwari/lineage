@@ -40,6 +40,16 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
+/** What each relationship means, read along its arrow, in the words the rest of the UI uses. */
+const EDGE_CAPTIONS: Record<string, string> = {
+  SUPERSEDES: "replaces", DERIVED_FROM: "rests on", AUTHORED: "wrote", AUTHORED_PR: "opened", DELEGATE_FOR: "decided as delegate",
+  DECIDES: "decides", ANNOUNCED_BY: "announced by", RECORDED_IN: "recorded in", REFERENCES: "cites", REQUIRES: "requires",
+  IMPLEMENTS: "implements", CONCERNS: "concerns", PART_OF: "part of", DISCUSSED_IN: "discussed in", IN: "in", POSTED: "posted",
+  AFFECTS: "affects", EXPERT_IN: "listed expert for", COMMITTED_TO: "commits to", WORKED_ON: "worked on",
+  COLLABORATED: "worked with", TIE: "worked with", STEP_IN: "could step in", SUGGESTS: "suggests", MORE: "",
+};
+export const edgeCaption = (type: string): string => EDGE_CAPTIONS[type] ?? type.toLowerCase().replace(/_/g, " ");
+
 export type AskStep = AskResult["tool_trace"][number];
 export type AskEvent = { type: "step"; step: AskStep } | { type: "draft" | "final"; result: AskResult } | { type: "error"; message: string };
 

@@ -38,3 +38,14 @@ test("a follow-up sharing a proposal or module continues the topic; an unrelated
   // sharing only a person (people span many topics) is not the same topic
   assert.equal(sharesTopic(pep455, { nodes: [{ id: "person:pitrou", label: "Person", props: {} }], edges: [] }), false);
 });
+
+test("every edge is captioned in plain words, the same way wherever it is shown", async () => {
+  const { edgeCaption } = await import("../lib/api.ts");
+  assert.equal(edgeCaption("SUPERSEDES"), "replaces");
+  assert.equal(edgeCaption("DERIVED_FROM"), "rests on");
+  assert.equal(edgeCaption("ANNOUNCED_BY"), "announced by");
+  assert.equal(edgeCaption("TIE"), "worked with");
+  assert.equal(edgeCaption("STEP_IN"), "could step in");
+  assert.equal(edgeCaption("SOME_NEW_TYPE"), "some new type");
+  assert.equal(edgeCaption("MORE"), "");
+});

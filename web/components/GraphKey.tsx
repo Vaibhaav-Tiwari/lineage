@@ -27,7 +27,7 @@ export default function GraphKey() {
             {ROWS.map(([cls, name, what]) => (
               <li key={name}><i className={cls} /><span><strong>{name}.</strong> {what}</span></li>
             ))}
-            <li><i className="key-red-line" /><span><strong>Red arrow.</strong> &ldquo;Supersedes&rdquo;, or the chain that blocked an action.</span></li>
+            <li><i className="key-red-line" /><span><strong>Red arrow.</strong> &ldquo;Replaces&rdquo;, or the chain that blocked an action.</span></li>
           </ul>
           <p>Hover a shape for its details; click it to open its card.</p>
         </div>

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Core } from "cytoscape";
-import { Fragment, GNode, nodeDetail, nodeTitle } from "@/lib/api";
+import { edgeCaption, Fragment, GNode, nodeDetail, nodeTitle } from "@/lib/api";
 import { answerSlip, CARD, decisionStamp, Fonts, proposalCard, SLIP, STAMP } from "@/lib/cards";
 
 export type Wave = { origin: string[]; stale: string[]; key: number } | null;
@@ -45,11 +45,11 @@ function stylesheet(font: string, typed: string): any[] {
         "arrow-scale": 0.7, "transition-property": "line-color, width, opacity", "transition-duration": 500 } },
     { selector: "edge[type = 'MORE']", style: { "line-style": "dashed", "target-arrow-shape": "none" } },
     { selector: "edge[type = 'SUPERSEDES']", style: {
-        width: 2.2, "line-color": "#c2273d", "target-arrow-color": "#c2273d", label: "replaces", "font-family": font, "font-style": "italic",
+        width: 2.2, "line-color": "#c2273d", "target-arrow-color": "#c2273d", label: "data(caption)", "font-family": font, "font-style": "italic",
         "font-size": 10, color: "#c2273d", "text-rotation": "autorotate", "text-background-color": "#eef1f3", "text-background-opacity": 1,
         "text-background-padding": "1px" } },
     { selector: "edge:selected, edge.labelled", style: {
-        label: "data(type)", "font-family": font, "font-size": 9, color: "#4a5468", "text-rotation": "autorotate",
+        label: "data(caption)", "font-family": font, "font-style": "italic", "font-size": 10, color: "#4a5468", "text-rotation": "autorotate",
         "text-background-color": "#eef1f3", "text-background-opacity": 1 } },
     { selector: "node.cited", style: { "border-width": 3, "border-color": "#2f5d8c" } },
     { selector: "node.stale", style: {
@@ -57,7 +57,7 @@ function stylesheet(font: string, typed: string): any[] {
         "border-color": "#7d8697", "border-style": "dashed", color: "#7d8697" } },
     { selector: "edge.stale", style: { "line-color": "#c9cfd6", "target-arrow-color": "#c9cfd6", "line-style": "dashed" } },
     { selector: "node.path", style: { "border-color": "#c2273d", "border-width": 3.5 } },
-    { selector: "edge.path", style: { "line-color": "#c2273d", "target-arrow-color": "#c2273d", width: 3, label: "data(type)",
+    { selector: "edge.path", style: { "line-color": "#c2273d", "target-arrow-color": "#c2273d", width: 3, label: "data(caption)", "font-family": font, "font-style": "italic", "text-rotation": "autorotate",
         "font-size": 9, color: "#c2273d", "text-background-color": "#eef1f3", "text-background-opacity": 1 } },
     { selector: "node:selected", style: { "overlay-color": "#2f5d8c", "overlay-opacity": 0.12, "overlay-padding": 6 } },
     // ---- archive vocabulary: cards, names, stamps, slips ----
@@ -92,11 +92,11 @@ function stylesheet(font: string, typed: string): any[] {
     { selector: "node[would = 'step_in']", style: { "border-color": "#2e7d5b", "border-width": 2.5, color: "#2e7d5b" } },
     { selector: "node[would = 'orphaned']", style: { "border-color": "#c2273d", "border-width": 2.5, "background-color": "#f6dde1" } },
     { selector: "node[would = 'one_left']", style: { "border-color": "#c2273d", "border-width": 1.5, "border-style": "dashed" } },
-    { selector: "edge[type = 'TIE']", style: { "target-arrow-shape": "none", "line-color": "#2f5d8c", width: 2, label: "worked with",
+    { selector: "edge[type = 'TIE']", style: { "target-arrow-shape": "none", "line-color": "#2f5d8c", width: 2, label: "data(caption)",
         "font-family": font, "font-style": "italic", "font-size": 10, color: "#2f5d8c", "text-rotation": "autorotate",
         "text-background-color": "#eef1f3", "text-background-opacity": 1 } },
     { selector: "edge[type = 'STEP_IN']", style: {
-        "line-style": "dashed", "line-color": "#2e7d5b", "target-arrow-color": "#2e7d5b", label: "could step in", "font-family": font,
+        "line-style": "dashed", "line-color": "#2e7d5b", "target-arrow-color": "#2e7d5b", label: "data(caption)", "font-family": font,
         "font-style": "italic", "font-size": 10, color: "#2e7d5b", "text-rotation": "autorotate", "text-background-color": "#eef1f3",
         "text-background-opacity": 1 } },
   ];
@@ -192,7 +192,7 @@ export default function EvidenceGraph({
       for (const e of fragment.edges) {
         const id = `${e.src}|${e.type}|${e.dst}`;
         if (ids.has(e.src) && ids.has(e.dst) && c.getElementById(id).empty())
-          added.push({ group: "edges", data: { id, source: e.src, target: e.dst, type: e.type } });
+          added.push({ group: "edges", data: { id, source: e.src, target: e.dst, type: e.type, caption: edgeCaption(e.type) } });
       }
       if (added.length) {
         c.add(added);
