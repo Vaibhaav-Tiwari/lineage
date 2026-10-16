@@ -1,6 +1,6 @@
 # Finding 3: `GRAPH.UDF LOAD REPLACE` is not atomic
 
-**Status:** draft, not posted. **Severity:** low to medium: queries that call a UDF fail transiently while the
+**Status:** reported on 16 Oct 2026 as [FalkorDB/FalkorDB#3357](https://github.com/FalkorDB/FalkorDB/issues/3357). **Severity:** low to medium: queries that call a UDF fail transiently while the
 library is being replaced, for example during a rolling deploy. **Reproducible:** yes, under concurrency.
 
 ## What we encountered

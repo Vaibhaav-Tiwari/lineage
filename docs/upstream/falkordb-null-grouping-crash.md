@@ -3,7 +3,7 @@
 **Status:** already reported upstream by others as [FalkorDB/FalkorDB#3150](https://github.com/FalkorDB/FalkorDB/issues/3150)
 (open since 30 Sep 2026, confirmed on 6.0.1 and 6.0.2), with a fix in review in
 [FalkorDB/FalkorDB#3229](https://github.com/FalkorDB/FalkorDB/pull/3229). **Do not open a new issue**: at most, add the
-main comment below to #3150. Not posted. **Severity:** high: a single query, read-only included, takes the whole server
+main comment below to #3150. Our data points were added [here](https://github.com/FalkorDB/FalkorDB/issues/3150#issuecomment-6215167947) on 16 Oct 2026. **Severity:** high: a single query, read-only included, takes the whole server
 down (every graph, every client). **Reproducible:** yes, every time on a freshly started server.
 
 ## What we encountered

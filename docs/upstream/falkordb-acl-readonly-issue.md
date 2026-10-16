@@ -1,6 +1,6 @@
 # Finding 2: the documented read-only ACL (`%R~pattern`) refuses `GRAPH.RO_QUERY`
 
-**Status:** draft, not posted. **Severity:** medium: the documented way to give a user read-only access to a graph
+**Status:** reported on 16 Oct 2026 as [FalkorDB/FalkorDB#3356](https://github.com/FalkorDB/FalkorDB/issues/3356). **Severity:** medium: the documented way to give a user read-only access to a graph
 does not work, so anyone following the docs ends up with either no access or full write access.
 **Reproducible:** yes, deterministic.
 

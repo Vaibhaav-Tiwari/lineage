@@ -1,11 +1,13 @@
-# Findings for FalkorDB (drafts, not posted)
+# Findings for FalkorDB
 
 Three things we found in FalkorDB 6.0.2 while building Lineage. Each file has the full story (what happened, how we
 found it, the evidence, what it meant for us and how we worked around it), then a ready-to-post issue and a short
-main comment. **Nothing here has been posted.** Each one goes out only after an explicit OK.
+main comment. **Reported on 16 Oct 2026:** finding 2 as [FalkorDB/FalkorDB#3356](https://github.com/FalkorDB/FalkorDB/issues/3356),
+finding 3 as [FalkorDB/FalkorDB#3357](https://github.com/FalkorDB/FalkorDB/issues/3357), and our data points added to
+the existing finding-1 issue in [this comment](https://github.com/FalkorDB/FalkorDB/issues/3150#issuecomment-6215167947).
 
-Checked against FalkorDB's GitHub on 16 Oct 2026: finding 1 is already reported (see the table). Findings 2 and 3 have
-no existing issue or pull request. Note that the open docs pull request
+Before posting we checked FalkorDB's GitHub: finding 1 was already reported (see the table); findings 2 and 3 had no
+existing issue or pull request. Note that the open docs pull request
 [FalkorDB/docs#456](https://github.com/FalkorDB/docs/pull/456) adds more `%R~` examples of the kind finding 2 shows to fail.
 
 | # | Finding | Severity | Reproducible | File |
