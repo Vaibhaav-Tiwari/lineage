@@ -227,13 +227,17 @@ SET t.status = 'claimed', t.claimed_by = $agent, t.claim_until = $until
 
 ### What we found in FalkorDB along the way
 
-Three findings in FalkorDB 6.0.2, written up with reproductions in [docs/upstream/](docs/upstream/README.md) (not yet
-reported upstream):
+Three findings in FalkorDB 6.0.2, written up with reproduction scripts, transcripts and screenshots in
+[docs/upstream/](docs/upstream/README.md):
 
 1. An aggregation grouped by a value and then a null can **crash the server** (Rust panic in `reply.rs`). It hit us
-   twice during benchmarking; we found a three-command reproduction.
-2. The documented read-only ACL pattern (`%R~`) refuses `GRAPH.RO_QUERY`, so the docs' own examples fail. ACL selectors work.
-3. `GRAPH.UDF LOAD REPLACE` is not atomic: concurrent queries can get `Unknown function`. We now reload only when the code changed.
+   twice during benchmarking. Others reported it first as
+   [FalkorDB/FalkorDB#3150](https://github.com/FalkorDB/FalkorDB/issues/3150); a fix is in review in
+   [FalkorDB/FalkorDB#3229](https://github.com/FalkorDB/FalkorDB/pull/3229).
+2. The documented read-only ACL pattern (`%R~`) refuses `GRAPH.RO_QUERY`, so the docs' own examples fail. ACL selectors
+   work. Not reported upstream yet.
+3. `GRAPH.UDF LOAD REPLACE` is not atomic: concurrent queries can get `Unknown function`. We now reload only when the
+   code changed. Not reported upstream yet.
 
 ---
 

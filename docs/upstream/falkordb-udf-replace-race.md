@@ -29,6 +29,15 @@ A query arriving during a reload fails instead of seeing either the old or the n
 only when it is missing or its code changed: `GRAPH.UDF LIST <lib> WITHCODE`, compare, then `LOAD` or `LOAD REPLACE`
 (`lineage/graph/udf.py`). UDFs persist in the snapshot across restarts, so they rarely need reloading at all.
 
+## Evidence (reproduced 16 Oct 2026 on a fresh `falkordb/falkordb:6.0.2` container)
+
+- Script: [`repro/udf_replace_race.py`](repro/udf_replace_race.py), which starts a throwaway container, runs every step, prints a transcript and removes
+  the container. Rerun with `uv run python docs/upstream/repro/udf_replace_race.py`.
+- Transcript: [`evidence/udf_replace_race.txt`](evidence/udf_replace_race.txt) (plain text, paste into the issue).
+- Screenshot: [`evidence/udf_replace_race.jpg`](evidence/udf_replace_race.jpg) (the same transcript, rendered; attach to the issue).
+
+![udf_replace_race](evidence/udf_replace_race.jpg)
+
 ---
 
 ## Ready-to-post issue
@@ -51,8 +60,10 @@ only when it is missing or its code changed: `GRAPH.UDF LIST <lib> WITHCODE`, co
 > 3. Client A loops on `GRAPH.UDF LOAD REPLACE repro "<same code>"`.
 > 4. Clients B to G loop on `GRAPH.RO_QUERY g "MATCH (n:N) RETURN sum(repro.recency(n.dates, '2026-10-16', 180))"`.
 >
-> Over 60 s: 29,696 replaces and about 10,100 queries, 6 of which failed with `Unknown function 'repro.recency'` (or
-> another function from the same library).
+> Over 60 s on a fresh container: 28,168 replaces and 32,227 queries, 3 of which failed with
+> `Unknown function 'repro.recency'` (timestamps in the attached transcript). It is intermittent: across four runs we saw
+> between 1 and 6 failures per minute. A self-contained script that reproduces it is attached
+> (`udf_replace_race.py`: starts a throwaway container, runs the loops, prints a transcript, removes the container).
 >
 > ### Expected
 >
@@ -65,5 +76,5 @@ only when it is missing or its code changed: `GRAPH.UDF LIST <lib> WITHCODE`, co
 ## Main comment
 
 > Small one we noticed while load-testing UDFs on 6.0.2: replacing a library is not atomic, so a query that lands
-> mid-replace gets `Unknown function`. Easy to work around (only replace when the code changed), but it bites during
-> deploys. The repro numbers are in the issue.
+> mid-replace gets `Unknown function`. It is rare (a few per minute under heavy load) and easy to work around (only
+> replace when the code changed), but it bites during deploys. A script, transcript and screenshot are attached.

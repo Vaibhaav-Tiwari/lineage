@@ -53,6 +53,15 @@ Lineage proves these boundaries live in its UI with 12 checks (`lineage/security
 agent, and anything destructive is checked with `ACL DRYRUN`. `+INFO` is needed because the Python client calls `INFO`
 on connect. `ACL DRYRUN` turned out to be a great, safe way to test a rule set.
 
+## Evidence (reproduced 16 Oct 2026 on a fresh `falkordb/falkordb:6.0.2` container)
+
+- Script: [`repro/acl_readonly.sh`](repro/acl_readonly.sh), which starts a throwaway container, runs every step, prints a transcript and removes
+  the container. Rerun with `bash docs/upstream/repro/acl_readonly.sh`.
+- Transcript: [`evidence/acl_readonly.txt`](evidence/acl_readonly.txt) (plain text, paste into the issue).
+- Screenshot: [`evidence/acl_readonly.jpg`](evidence/acl_readonly.jpg) (the same transcript, rendered; attach to the issue).
+
+![acl_readonly](evidence/acl_readonly.jpg)
+
 ---
 
 ## Ready-to-post issue

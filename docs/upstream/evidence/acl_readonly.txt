@@ -1,0 +1,45 @@
+
+# Environment (2026-10-16T11:49:15Z)
+image: falkordb/falkordb:6.0.2
+redis_version:8.10.2
+graph module: 60002
+
+# A graph to read
+$ GRAPH.QUERY app2:users "CREATE (:U)"
+Labels added: 1
+
+# Docs example 1 (docs.falkordb.com/commands/acl): read-only user
+$ ACL SETUSER reader_doc on >pass +GRAPH.RO_QUERY %R~*
+OK
+$ (as reader_doc) GRAPH.RO_QUERY app2:users "MATCH (n) RETURN count(n)"
+NOPERM No permissions to access a key
+
+
+# Docs example 2: full access to app1:*, read-only access to app2:*
+$ ACL SETUSER rw_doc on >pass +@all ~app1:* %R~app2:*
+OK
+$ (as rw_doc) GRAPH.RO_QUERY app2:users "MATCH (n) RETURN count(n)"
+NOPERM No permissions to access a key
+
+
+# Why: the ACL log says the key was refused
+$ ACL LOG 1
+reason key
+context toplevel
+object app2:users
+username rw_doc
+
+# Workaround: a Redis ACL selector that grants only GRAPH.RO_QUERY on the read-only pattern
+$ ACL SETUSER agent on >pass resetkeys -@all +@connection +INFO ~app1:* +GRAPH.QUERY +GRAPH.RO_QUERY (~app2:* +GRAPH.RO_QUERY)
+OK
+$ (as agent) GRAPH.RO_QUERY app2:users "MATCH (n) RETURN count(n)"   # read: allowed
+count(n)
+1
+$ (as agent) GRAPH.QUERY app2:users "CREATE (:Hacked)"             # write: refused
+NOPERM No permissions to access a key
+$ (as agent) GRAPH.QUERY app1:own "CREATE (:Mine)"                 # own graph: allowed
+Labels added: 1
+$ GRAPH.RO_QUERY app2:users "MATCH (h:Hacked) RETURN count(h)"     # nothing was written
+0
+
+# Done: throwaway container removed

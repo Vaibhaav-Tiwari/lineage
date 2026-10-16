@@ -1,6 +1,9 @@
 # Finding 1: an aggregation grouped by a value and then a null crashes the server
 
-**Status:** draft, not posted. **Severity:** high: a single query, read-only included, takes the whole server
+**Status:** already reported upstream by others as [FalkorDB/FalkorDB#3150](https://github.com/FalkorDB/FalkorDB/issues/3150)
+(open since 30 Sep 2026, confirmed on 6.0.1 and 6.0.2), with a fix in review in
+[FalkorDB/FalkorDB#3229](https://github.com/FalkorDB/FalkorDB/pull/3229). **Do not open a new issue**: at most, add the
+main comment below to #3150. Not posted. **Severity:** high: a single query, read-only included, takes the whole server
 down (every graph, every client). **Reproducible:** yes, every time on a freshly started server.
 
 ## What we encountered
@@ -76,7 +79,7 @@ aggregation, plus something about the result shape that we did not isolate.
 
 ---
 
-## Ready-to-post issue
+## Issue text (kept for reference; the issue already exists as #3150)
 
 **Repository:** https://github.com/FalkorDB/FalkorDB/issues
 
@@ -130,7 +133,7 @@ aggregation, plus something about the result shape that we did not isolate.
 >   this description. We are happy to share the longer query and a dataset if that helps.
 > - Workaround: `coalesce()` nullable grouping keys.
 
-## Main comment
+## Main comment (for #3150)
 
 > Hi FalkorDB team! While building on 6.0.2 for Graph Hacks we found a query that panics the server
 > (`reply.rs:655`, unwrap on `None`). The minimal repro is three commands on an empty container: a value then a

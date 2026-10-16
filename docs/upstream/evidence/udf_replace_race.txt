@@ -1,0 +1,25 @@
+# Environment (2026-10-16T11:50:57+00:00)
+image: falkordb/falkordb:6.0.2
+redis_version: 8.10.2
+graph module: 60002
+
+# Setup
+$ GRAPH.UDF LOAD repro "<library defining repro.recency>"
+  OK
+$ GRAPH.QUERY g "UNWIND range(1, 2000) AS i CREATE (:N {dates: ['2025-01-01','2025-06-01','2026-01-01']})"
+$ GRAPH.RO_QUERY g "MATCH (n:N) RETURN sum(repro.recency(n.dates, '2026-10-16', 180))"
+  1110.94192323542
+
+# For 60 s: 1 client replaces the library with the SAME code in a loop; 6 clients run the query in a loop
+replaces: 28,168
+successful queries: 32,224
+failed queries: 3
+  3 x  Unknown function 'repro.recency'
+first failures:
+  2026-10-16T11:51:06.218+00:00  Unknown function 'repro.recency'
+  2026-10-16T11:51:10.894+00:00  Unknown function 'repro.recency'
+  2026-10-16T11:51:43.102+00:00  Unknown function 'repro.recency'
+
+Expected: 0 failed queries (a replace with identical code should be atomic).
+
+# Done: throwaway container removed
