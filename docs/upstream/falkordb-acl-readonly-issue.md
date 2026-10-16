@@ -53,6 +53,11 @@ Lineage proves these boundaries live in its UI with 12 checks (`lineage/security
 agent, and anything destructive is checked with `ACL DRYRUN`. `+INFO` is needed because the Python client calls `INFO`
 on connect. `ACL DRYRUN` turned out to be a great, safe way to test a rule set.
 
+The read selector grants `GRAPH.RO_QUERY` only. `GRAPH.PROFILE` executes the query, writes included: a user with
+`+GRAPH.PROFILE` on a pattern can `CREATE` and `DELETE` there (checked on 6.0.2, 16 Oct 2026), so it belongs only on
+the agent's own graph. `GRAPH.EXPLAIN` does not execute. We flagged this on the docs pull request
+[FalkorDB/docs#456](https://github.com/FalkorDB/docs/pull/456#issuecomment-6216303368), whose "read-only" example grants it.
+
 ## Evidence (reproduced 16 Oct 2026 on a fresh `falkordb/falkordb:6.0.2` container)
 
 - Script: [`repro/acl_readonly.sh`](repro/acl_readonly.sh), which starts a throwaway container, runs every step, prints a transcript and removes

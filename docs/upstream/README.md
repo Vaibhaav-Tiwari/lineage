@@ -7,8 +7,11 @@ finding 3 as [FalkorDB/FalkorDB#3357](https://github.com/FalkorDB/FalkorDB/issue
 the existing finding-1 issue in [this comment](https://github.com/FalkorDB/FalkorDB/issues/3150#issuecomment-6215167947).
 
 Before posting we checked FalkorDB's GitHub: finding 1 was already reported (see the table); findings 2 and 3 had no
-existing issue or pull request. Note that the open docs pull request
-[FalkorDB/docs#456](https://github.com/FalkorDB/docs/pull/456) adds more `%R~` examples of the kind finding 2 shows to fail.
+existing issue or pull request. The open docs pull request
+[FalkorDB/docs#456](https://github.com/FalkorDB/docs/pull/456) adds more `%R~` examples of the kind finding 2 shows to
+fail; [our review comment](https://github.com/FalkorDB/docs/pull/456#issuecomment-6216303368) points to #3356, gives the
+selector form, and notes that its "read-only" analytics user is writable because `GRAPH.PROFILE` executes the query,
+writes included.
 
 | # | Finding | Severity | Reproducible | File |
 |---|---|---|---|---|
