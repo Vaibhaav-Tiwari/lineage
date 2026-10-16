@@ -187,8 +187,8 @@ The FalkorDB features Lineage depends on:
 
 All **144 queries** live in [`lineage/graph/queries.py`](lineage/graph/queries.py), documented in
 [docs/queries.md](docs/queries.md). Median server-side timings for the key ones are in
-[docs/benchmarks.md](docs/benchmarks.md): everything is under 3 ms; betweenness over all contributors and label
-propagation are the heaviest, at about 2.5 ms.
+[docs/benchmarks.md](docs/benchmarks.md): every median is under 3 ms. The heaviest, at 2 to 2.5 ms, are the recency
+UDF over every module's commit history since 2015, betweenness over all contributors, and label propagation.
 
 The queries that matter most:
 

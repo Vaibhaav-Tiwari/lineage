@@ -28,7 +28,7 @@ def cases(vec: list[float]) -> list[tuple[str, str, str, str, dict]]:
         ("Semantic search over PEP passages (vector index, k=12)", "VECTOR_CHUNKS", COMPANY, Q.VECTOR_CHUNKS, {"k": 12, "q": vec, "as_of": None}),
         ("Keyword search over PEP titles (full-text index)", "FULLTEXT_PEP_TITLES", COMPANY, Q.FULLTEXT_PEP_TITLES, {"q": "annotations", "k": 12, "as_of": None}),
         ("Who decided PEP 649, and where it was announced", "DECISION_PROVENANCE", COMPANY, Q.DECISION_PROVENANCE, {"id": "pep:649"}),
-        ("PEP 563's supersede chain, both directions, up to 3 hops", "SUPERSEDE_CHAIN", COMPANY, Q.SUPERSEDE_CHAIN, {"id": "pep:563"}),
+        ("Packaging-metadata supersede chain around PEP 345 (1.1 to 2.1), both directions, up to 3 hops", "SUPERSEDE_CHAIN", COMPANY, Q.SUPERSEDE_CHAIN, {"id": "pep:345"}),
         ("Proposals within 2 citation hops of PEP 484", "RELATED_2", COMPANY, Q.RELATED_2, {"id": "pep:484"}),
         ("Listed and actual owners of asyncio", "AREA_EXPERTS", COMPANY, Q.AREA_EXPERTS, {"id": "area:asyncio"}),
         ("The ripple: everything that cites PEP 563", "RIPPLE_SOFT_1", COMPANY, Q.RIPPLE_SOFT_1, {"changed": ["pep:563"], "exclude": []}),
