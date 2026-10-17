@@ -17,6 +17,15 @@ async def test_stale_lineage_blocks_with_path(g):
     assert x in c["path"] and "ev:pep:101" in c["path"]
 
 
+
+async def test_a_reason_ending_in_a_full_stop_does_not_get_a_second_one(g):
+    await ensure_agent_schema(g)
+    a = await record_answer(g, "q", "a", ["pep:101"], [{"text": "B", "evidence": ["pep:101"], "confidence": 0.9}], None)
+    x = await propose_action(g, "add_to_faq", {}, [a])
+    await agent_fanout(g, ["pep:101"], "PEP 101 is superseded by PEP 102 (Python 3.14).")
+    c = await check_action(g, x)
+    assert "(Python 3.14). Path:" in c["reason"] and ".." not in c["reason"]
+
 async def test_clean_lineage_is_allowed_and_executes_once(g):
     await ensure_agent_schema(g)
     a = await record_answer(g, "q", "a", ["pep:200"], [{"text": "C", "evidence": ["pep:200"], "confidence": 0.9}], None)

@@ -94,7 +94,8 @@ export default function WhatIf({ onResult, onShowGraph }: {
       {!result && !preview && !busy && (
         <div className="whatif-empty">
           <h3>Ask what would break</h3>
-          <p>Pick a person, a group of people, or a proposal. Lineage copies the whole graph, applies your &ldquo;what if&rdquo; to the copy, and tells you in plain words what would be left without an owner and who could step in.</p>
+          <p>Pick a person or a group of people, and Lineage copies the whole graph, removes them from the copy, and tells you in plain words what would be left without an owner and who could step in.</p>
+          <p>Pick a proposal, and Lineage does a dry run of the change: which proposals would need review, and which answers, beliefs and actions would go stale.</p>
           <p>The real graph is never touched.</p>
         </div>
       )}

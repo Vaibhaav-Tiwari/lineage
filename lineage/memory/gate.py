@@ -22,7 +22,7 @@ async def check_action(ag, action_id: str) -> dict:
         return {"allowed": True, "reason": None, "path": []}
     r = rows[0]
     kind = "stale" if r["stale"] else "tentative"
-    why = f" — {r['why']}" if r["why"] else ""
+    why = f" — {r['why'].rstrip('.')}" if r["why"] else ""  # the sentence below adds its own full stop
     reason = f"blocked: depends on {kind} {r['culprit']}{why}. Path: " + " ← ".join(r["path"])
     return {"allowed": False, "reason": reason, "path": r["path"]}
 
