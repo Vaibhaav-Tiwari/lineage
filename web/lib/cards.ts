@@ -5,10 +5,10 @@ export const CARD = { w: 92, h: 54 };
 export const STAMP = { w: 88, h: 38 };
 export const SLIP = { w: 60, h: 38 };
 
+import type { Palette } from "./theme";
+
 const SCALE = 3;
-const INK = "#18233a", SOFT = "#4a5468", FAINT = "#7d8697", PAPER = "#f8f9fa", BLEACH = "#d5dae0";
-const PINE = "#2e7d5b", STAMP_RED = "#c2273d";
-const cache = new Map<string, string>();
+const cache = new Map<string, string>(); // keyed by palette too, so each theme draws its own artwork
 
 export type Fonts = { serif: string; typed: string };
 
@@ -34,28 +34,29 @@ function fit(ctx: CanvasRenderingContext2D, text: string, max: number): string {
   return `${t.trimEnd()}…`;
 }
 
-function hatch(ctx: CanvasRenderingContext2D, w: number, h: number) {
-  ctx.fillStyle = BLEACH; ctx.fillRect(0, 0, w, h);
-  ctx.strokeStyle = "rgba(125, 134, 151, 0.45)"; ctx.lineWidth = 0.8;
+function hatch(ctx: CanvasRenderingContext2D, P: Palette, w: number, h: number) {
+  ctx.fillStyle = P.cardStale; ctx.fillRect(0, 0, w, h);
+  ctx.strokeStyle = P.hatchLine; ctx.globalAlpha = 0.45; ctx.lineWidth = 0.8;
   for (let x = -h; x < w; x += 6) { ctx.beginPath(); ctx.moveTo(x, h); ctx.lineTo(x + h, 0); ctx.stroke(); }
+  ctx.globalAlpha = 1;
 }
 
 /** A proposal: small "PEP" over a big number and a short title. Faded when stale; struck when superseded. */
-export function proposalCard(f: Fonts, num: string, title: string, stale: boolean, superseded: boolean): string {
-  const key = `card|${num}|${title}|${stale}|${superseded}`;
+export function proposalCard(f: Fonts, P: Palette, num: string, title: string, stale: boolean, superseded: boolean): string {
+  const key = `card|${P.paper}|${num}|${title}|${stale}|${superseded}`;
   const hit = cache.get(key); if (hit) return hit;
   const { w, h } = CARD;
   const [c, ctx] = canvas(w, h);
-  if (stale) hatch(ctx, w, h); else { ctx.fillStyle = PAPER; ctx.fillRect(0, 0, w, h); }
+  if (stale) hatch(ctx, P, w, h); else { ctx.fillStyle = P.card; ctx.fillRect(0, 0, w, h); }
   ctx.textBaseline = "alphabetic";
-  ctx.fillStyle = FAINT; ctx.font = `9px ${f.typed}`; ctx.fillText("PEP", 7, 13);
-  if (superseded) { ctx.fillStyle = STAMP_RED; ctx.font = `italic 9.5px ${f.serif}`; ctx.textAlign = "right"; ctx.fillText("superseded", w - 6, 13); ctx.textAlign = "left"; }
-  ctx.fillStyle = stale ? SOFT : INK; ctx.font = `22px ${f.serif}`; ctx.fillText(num, 7, 35);
+  ctx.fillStyle = P.inkFaint; ctx.font = `9px ${f.typed}`; ctx.fillText("PEP", 7, 13);
+  if (superseded) { ctx.fillStyle = P.stamp; ctx.font = `italic 9.5px ${f.serif}`; ctx.textAlign = "right"; ctx.fillText("superseded", w - 6, 13); ctx.textAlign = "left"; }
+  ctx.fillStyle = stale ? P.inkSoft : P.ink; ctx.font = `22px ${f.serif}`; ctx.fillText(num, 7, 35);
   if (superseded) {
     const nw = ctx.measureText(num).width;
-    ctx.strokeStyle = STAMP_RED; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(4, 28); ctx.lineTo(nw + 11, 28); ctx.stroke();
+    ctx.strokeStyle = P.stamp; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(4, 28); ctx.lineTo(nw + 11, 28); ctx.stroke();
   }
-  ctx.fillStyle = SOFT; ctx.font = `10px ${f.serif}`; ctx.fillText(fit(ctx, title, w - 12), 7, 48);
+  ctx.fillStyle = P.inkSoft; ctx.font = `10px ${f.serif}`; ctx.fillText(fit(ctx, title, w - 12), 7, 48);
   const url = sized(c, w, h);
   cache.set(key, url);
   return url;
@@ -64,12 +65,12 @@ export function proposalCard(f: Fonts, num: string, title: string, stale: boolea
 const STAMP_WORD: Record<string, string> = { accept: "Accepted", reject: "Rejected", supersede: "Superseded", withdraw: "Withdrawn", defer: "Deferred", final: "Final" };
 
 /** A decision: a slightly tilted rubber stamp with the outcome and its date. */
-export function decisionStamp(f: Fonts, kind: string, at: string | undefined): string {
-  const key = `stamp|${kind}|${at}`;
+export function decisionStamp(f: Fonts, P: Palette, kind: string, at: string | undefined): string {
+  const key = `stamp|${P.paper}|${kind}|${at}`;
   const hit = cache.get(key); if (hit) return hit;
   const { w, h } = STAMP;
   const [c, ctx] = canvas(w, h);
-  const color = kind === "accept" || kind === "final" ? PINE : kind === "reject" || kind === "supersede" ? STAMP_RED : SOFT;
+  const color = kind === "accept" || kind === "final" ? P.pine : kind === "reject" || kind === "supersede" ? P.stamp : P.inkSoft;
   const word = STAMP_WORD[kind] ?? (kind ? kind[0].toUpperCase() + kind.slice(1) : "Decision");
   ctx.translate(w / 2, h / 2); ctx.rotate(-0.07);
   ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.strokeRect(-w / 2 + 5, -h / 2 + 4, w - 10, h - 8);
@@ -82,13 +83,13 @@ export function decisionStamp(f: Fonts, kind: string, at: string | undefined): s
 }
 
 /** The Historian's answer: a paper slip with a folded corner. Struck in red once it no longer holds. */
-export function answerSlip(f: Fonts, stale: boolean): string {
-  const key = `slip|${stale}`;
+export function answerSlip(f: Fonts, P: Palette, stale: boolean): string {
+  const key = `slip|${P.paper}|${stale}`;
   const hit = cache.get(key); if (hit) return hit;
   const { w, h } = SLIP;
   const [c, ctx] = canvas(w, h);
-  const color = stale ? STAMP_RED : PINE;
-  ctx.fillStyle = PAPER; ctx.strokeStyle = color; ctx.lineWidth = 1.3;
+  const color = stale ? P.stamp : P.pine;
+  ctx.fillStyle = P.card; ctx.strokeStyle = color; ctx.lineWidth = 1.3;
   ctx.beginPath(); ctx.moveTo(2, 2); ctx.lineTo(w - 12, 2); ctx.lineTo(w - 2, 12); ctx.lineTo(w - 2, h - 2); ctx.lineTo(2, h - 2); ctx.closePath(); ctx.fill(); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(w - 12, 2); ctx.lineTo(w - 12, 12); ctx.lineTo(w - 2, 12); ctx.stroke();
   ctx.fillStyle = color; ctx.font = `italic 12px ${f.serif}`; ctx.fillText("Answer", 8, 24);

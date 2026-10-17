@@ -8,6 +8,7 @@ import AnswerText from "./AnswerText";
 import IndexCard from "./IndexCard";
 import GraphKey from "./GraphKey";
 import Tip from "./Tip";
+import ThemeToggle from "./ThemeToggle";
 import OrgView from "./OrgView";
 import MemoryView from "./MemoryView";
 import type { Replay, Wave } from "./EvidenceGraph";
@@ -308,6 +309,7 @@ export default function Workspace() {
             <button key={v} aria-pressed={view === v} onClick={() => setView(v)}>{v === "ask" ? "Ask" : v === "org" ? "Organisation" : "Memory"}</button>
           ))}
         </nav>
+        <ThemeToggle />
       </header>
       <TimeRail events={events} ticks={ticks} span={span} asOf={asOf} onAsOf={setAsOf} onApply={apply} onUndo={undo} onReset={reset} applying={applying} />
 

@@ -4,16 +4,16 @@
   --card: #f8f9fa;
   --ink: #18233a;
   --ink-soft: #4a5468;
-  --ink-faint: #7d8697;
+  --ink-faint: #636c7c;
   --rule: #c9d0d8;
   --cyan: #2f5d8c;
   --cyan-wash: #dce6f0;
-  --pine: #2e7d5b;
+  --pine: #2a7354;
   --pine-wash: #dcebe3;
   --bleach: #c9cfd6;
   --stamp: #c2273d;
   --stamp-wash: #f6dde1;
-  --brass: #9a7631;
+  --brass: #80621f;
   --brass-light: #f1d998;
   --display: "Libre Caslon Condensed", Georgia, serif;
   --text: "Libre Caslon Condensed", Georgia, serif;
@@ -24,6 +24,31 @@
   --step-2: 1.5rem;
   --step-3: 2.125rem;
   --hatch: repeating-linear-gradient(135deg, transparent 0 5px, rgba(125, 134, 151, 0.28) 5px 6px);
+  --shadow: var(--shadow);
+  --shadow-strong: rgba(24, 35, 58, 0.35);
+  --span-edge: rgba(47, 93, 140, 0.45);
+  color-scheme: light;
+}
+
+/* the archive at night: same tokens, values from lib/theme.ts (PALETTES.dark). Follows the system setting
+   unless the visitor picked a theme (html[data-theme]); both blocks must stay identical. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #12161c; --paper-deep: #0d1015; --card: #1a1f27; --ink: #e8e2d2; --ink-soft: #b9b2a2; --ink-faint: #8f97a4;
+    --rule: #2d3540; --cyan: #8ab4e0; --cyan-wash: #1b2938; --pine: #6cc49a; --pine-wash: #16281f; --bleach: #353c46;
+    --stamp: #f07484; --stamp-wash: #3b1d24; --brass: #d8b062; --brass-light: #f1d998;
+    --hatch: repeating-linear-gradient(135deg, transparent 0 5px, rgba(160, 168, 180, 0.2) 5px 6px);
+    --shadow: rgba(0, 0, 0, 0.45); --shadow-strong: rgba(0, 0, 0, 0.6); --span-edge: rgba(138, 180, 224, 0.5);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+    --paper: #12161c; --paper-deep: #0d1015; --card: #1a1f27; --ink: #e8e2d2; --ink-soft: #b9b2a2; --ink-faint: #8f97a4;
+    --rule: #2d3540; --cyan: #8ab4e0; --cyan-wash: #1b2938; --pine: #6cc49a; --pine-wash: #16281f; --bleach: #353c46;
+    --stamp: #f07484; --stamp-wash: #3b1d24; --brass: #d8b062; --brass-light: #f1d998;
+    --hatch: repeating-linear-gradient(135deg, transparent 0 5px, rgba(160, 168, 180, 0.2) 5px 6px);
+    --shadow: rgba(0, 0, 0, 0.45); --shadow-strong: rgba(0, 0, 0, 0.6); --span-edge: rgba(138, 180, 224, 0.5);
+    color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
@@ -56,6 +81,11 @@ a { color: var(--cyan); }
   border-bottom: 2px solid transparent; font-size: var(--step-1);
 }
 .views button[aria-pressed="true"] { color: var(--ink); border-bottom-color: var(--ink); }
+.theme-toggle {
+  border: 0; background: none; padding: 0.3rem 0 0.3rem 0.5rem; cursor: pointer; color: var(--ink-soft); font-style: italic;
+  font-size: var(--step--1); text-decoration: underline; text-decoration-color: var(--rule); text-underline-offset: 3px;
+}
+.theme-toggle:hover { color: var(--ink); text-decoration-color: var(--ink-soft); }
 
 /* ---------- time rail: a ruler in one row (status | ruler | reset) ---------- */
 .rail {
@@ -91,8 +121,8 @@ a { color: var(--cyan); }
 .rail-pin-label.left { left: auto; right: 10px; }
 /* the band: which years the evidence on the graph comes from */
 .rail-span {
-  position: absolute; top: 19px; height: 15px; background: var(--cyan-wash); border-left: 1px solid rgba(47, 93, 140, 0.45);
-  border-right: 1px solid rgba(47, 93, 140, 0.45); transition: left 500ms ease, width 500ms ease;
+  position: absolute; top: 19px; height: 15px; background: var(--cyan-wash); border-left: 1px solid var(--span-edge);
+  border-right: 1px solid var(--span-edge); transition: left 500ms ease, width 500ms ease;
 }
 .rail-span > .tip-wrap { display: block; width: 100%; height: 100%; }
 .rail-span-hit { display: block; width: 100%; height: 100%; cursor: help; }
@@ -105,13 +135,13 @@ a { color: var(--cyan); }
 .rail-handle::after {
   content: ""; position: absolute; left: -7px; top: -11px; width: 17px; height: 17px; border-radius: 50%;
   background: radial-gradient(circle at 35% 30%, #fff6dc 0, var(--brass-light) 28%, #c49a48 62%, #7d5c22 100%);
-  border: 1px solid #6e5019; box-shadow: 0 1px 2px rgba(24, 35, 58, 0.35), inset 0 -1px 1px rgba(0, 0, 0, 0.15);
+  border: 1px solid #6e5019; box-shadow: 0 1px 2px var(--shadow-strong), inset 0 -1px 1px rgba(0, 0, 0, 0.15);
 }
 .rail-handle:focus-visible { outline: none; }
 .rail-handle:focus-visible::after { box-shadow: 0 0 0 3px var(--paper), 0 0 0 5px var(--cyan); }
 .pin-pop {
   position: absolute; top: 40px; transform: translateX(-90%); width: 300px; z-index: 5;
-  background: var(--card); border: 1px solid var(--ink); padding: 0.8rem 0.95rem; box-shadow: 0 6px 20px rgba(24, 35, 58, 0.12);
+  background: var(--card); border: 1px solid var(--ink); padding: 0.8rem 0.95rem; box-shadow: 0 6px 20px var(--shadow);
   font-size: var(--step-0); color: var(--ink);
 }
 .pin-pop p { margin: 0 0 0.6rem; line-height: 1.45; }
@@ -310,7 +340,7 @@ a { color: var(--cyan); }
 .tip-bottom { top: calc(100% + 8px); }
 .node-tip {
   position: absolute; z-index: 6; max-width: 280px; background: var(--card); border: 1px solid var(--ink);
-  padding: 0.45rem 0.6rem; font-size: var(--step--1); line-height: 1.4; pointer-events: none; box-shadow: 0 6px 18px rgba(24, 35, 58, 0.14);
+  padding: 0.45rem 0.6rem; font-size: var(--step--1); line-height: 1.4; pointer-events: none; box-shadow: 0 6px 18px var(--shadow);
 }
 .node-tip strong { display: block; font-family: var(--display); font-weight: 400; font-size: var(--step-0); }
 .node-tip .stale-why { color: var(--stamp); margin-top: 0.2rem; }
@@ -323,7 +353,7 @@ a { color: var(--cyan); }
 }
 .key-panel {
   position: absolute; right: 0; bottom: 40px; width: 330px; background: var(--card); border: 1px solid var(--rule);
-  padding: 0.9rem 1rem; box-shadow: 0 8px 28px rgba(24, 35, 58, 0.16);
+  padding: 0.9rem 1rem; box-shadow: 0 8px 28px var(--shadow);
 }
 .key-panel h4 { font-family: var(--display); font-weight: 400; font-size: var(--step-1); margin: 0 0 0.5rem; }
 .key-panel ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.45rem; font-size: var(--step--1); }
@@ -392,7 +422,7 @@ a { color: var(--cyan); }
 .combo { position: relative; max-width: 420px; }
 .combo input { width: 100%; border: 1px solid var(--rule); background: var(--card); padding: 0.45rem 0.65rem; }
 .combo-list { position: absolute; top: calc(100% + 2px); left: 0; right: 0; z-index: 8; list-style: none; margin: 0; padding: 0;
-  background: var(--card); border: 1px solid var(--rule); box-shadow: 0 8px 24px rgba(24, 35, 58, 0.12); }
+  background: var(--card); border: 1px solid var(--rule); box-shadow: 0 8px 24px var(--shadow); }
 .combo-list li { padding: 0.4rem 0.65rem; cursor: pointer; display: flex; gap: 0.5rem; align-items: baseline; }
 .combo-list li[aria-selected="true"] { background: var(--cyan-wash); }
 .combo-list .combo-empty { color: var(--ink-faint); font-style: italic; cursor: default; }
@@ -440,7 +470,7 @@ sup.fn button:hover { text-decoration: underline; }
 .replay-caption {
   position: absolute; left: 50%; bottom: 2.6rem; transform: translateX(-50%); z-index: 6; max-width: min(36rem, calc(100% - 2rem));
   display: flex; gap: 0.7rem; align-items: baseline; background: var(--card); border: 1px solid var(--brass); padding: 0.4rem 0.8rem;
-  font-size: var(--step--1); color: var(--ink); box-shadow: 0 1px 3px rgba(24, 35, 58, 0.12);
+  font-size: var(--step--1); color: var(--ink); box-shadow: 0 1px 3px var(--shadow);
 }
 .replay-caption .step { color: var(--brass); white-space: nowrap; }
 
