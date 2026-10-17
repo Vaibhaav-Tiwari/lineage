@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     llm_model: str = "claude-opus-5-5"
     llm_backend: str = "claude-code"  # claude-code | graph-only | anthropic
     embed_model: str = "BAAI/bge-small-en-v1.5"
+    cors_origins: str = "*"          # comma-separated origins allowed to call the API from a browser
+    auto_reset_minutes: int = 0       # public demo: reset the shared demo this often (0 = never)
 
 
 @lru_cache

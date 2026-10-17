@@ -14,6 +14,8 @@ import type { Replay, Wave } from "./EvidenceGraph";
 
 const EvidenceGraph = dynamic(() => import("./EvidenceGraph"), { ssr: false });
 const UID = "visitor";
+// the hosted demo is one shared demo for every visitor, reset on the hour (see lineage/api/main.py, auto_reset)
+const SHARED_DEMO = process.env.NEXT_PUBLIC_SHARED_DEMO === "1";
 const EMPTY: Fragment = { nodes: [], edges: [] };
 
 function stepLabel(t: { name: string; input: any }): string {
@@ -448,11 +450,16 @@ export default function Workspace() {
       {view === "memory" && <MemoryView uid={UID} />}
 
       <footer className="strip">
-        <span><span className={`dot ${online ? "" : "off"}`} />{online ? "Historian and Steward online" : "API offline — start it with uvicorn"}</span>
+        <span><span className={`dot ${online ? "" : "off"}`} />{online ? "Historian and Steward online" : SHARED_DEMO ? "API offline — try again in a minute" : "API offline — start it with uvicorn"}</span>
         <Tip text="The company archive, each agent's memory, each visitor's memory and the shared task board are separate graphs. FalkorDB itself enforces who may write which.">
           <span tabIndex={0}>{graphs.length} graphs in FalkorDB, {graphs.reduce((s, g) => s + g.mb, 0).toFixed(0)} MB</span>
         </Tip>
         {lastMs !== null && <span>Last answer walked the graph in {Math.round(lastMs)} ms</span>}
+        {SHARED_DEMO && (
+          <Tip text="Everyone using this page shares one demo, so a change someone else applied may already be showing. It goes back to the start every hour, or press Reset demo.">
+            <span tabIndex={0}>Shared demo, reset every hour</span>
+          </Tip>
+        )}
         <span style={{ marginLeft: "auto" }}>Data: the public Python project (PEPs, discuss.python.org, CPython)</span>
       </footer>
     </div>

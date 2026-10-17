@@ -1,0 +1,11 @@
+.git
+.venv
+.env
+web
+docs
+eval
+scripts
+tests
+**/__pycache__
+.superpowers
+.claude

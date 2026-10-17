@@ -10,3 +10,6 @@ node_modules/
 web/.next/
 web/node_modules/
 web/next-env.d.ts
+
+# the hosted demo's graph snapshot: uploaded with `railway up --no-gitignore`, never committed
+deploy/falkordb/dump.rdb

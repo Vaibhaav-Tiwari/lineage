@@ -77,10 +77,22 @@ class PreviewBody(BaseModel):
     pep: int
 
 
+async def auto_reset(reset, minutes: int, sleep=asyncio.sleep) -> None:
+    """Public demo: everyone shares one demo, so put it back to the start every `minutes`. A failed reset is
+    retried at the next interval instead of stopping the loop."""
+    while True:
+        await sleep(minutes * 60)
+        try:
+            await reset()
+        except Exception as e:  # noqa: BLE001
+            print(f"auto-reset failed: {e}", flush=True)
+
+
 class State:
     def __init__(self, prefix: str, llm_factory: Callable | None, embedder):
         self.prefix, self._llm_factory, self._embedder = prefix, llm_factory, embedder
         self._lock = asyncio.Lock()
+        self.fork_slot = asyncio.Semaphore(1)  # a what-if copies the whole graph: one copy in memory at a time
         self.ready = False
         self._user_schemas: set[str] = set()
 
@@ -150,11 +162,26 @@ class State:
 
 def create_app(prefix: str = "lineage", llm_factory: Callable | None = None, embedder=None,
                cors_origins: list[str] | None = None) -> FastAPI:
-    app = FastAPI(title="Lineage", description="A company brain that un-learns.")
+    from contextlib import asynccontextmanager
+
+    from lineage.config import settings
+
+    hooks: dict = {}
+
+    @asynccontextmanager
+    async def lifespan(_app):
+        minutes = settings().auto_reset_minutes
+        task = asyncio.create_task(auto_reset(hooks["reset"], minutes)) if minutes > 0 else None
+        yield
+        if task:
+            task.cancel()
+
+    app = FastAPI(title="Lineage", description="A company brain that un-learns.", lifespan=lifespan)
     st = State(prefix, llm_factory, embedder)
     app.state.st = st
     app.state.shutdown = st.shutdown
-    app.add_middleware(CORSMiddleware, allow_origins=cors_origins or ["*"], allow_methods=["*"], allow_headers=["*"])
+    origins = cors_origins or [o.strip() for o in settings().cors_origins.split(",") if o.strip()] or ["*"]
+    app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["*"], allow_headers=["*"])
 
     @app.middleware("http")
     async def _ensure_ready(request: Request, call_next):
@@ -345,7 +372,8 @@ def create_app(prefix: str = "lineage", llm_factory: Callable | None = None, emb
     async def whatif(body: WhatIfBody):
         ids = body.person_ids or ([body.person_id] if body.person_id else [])
         try:
-            return await departure_impact(st.steward_db, ids, base=st.name("company"))
+            async with st.fork_slot:
+                return await departure_impact(st.steward_db, ids, base=st.name("company"))
         except ValueError as e:
             raise HTTPException(404, str(e))
 
@@ -392,10 +420,10 @@ def create_app(prefix: str = "lineage", llm_factory: Callable | None = None, emb
     async def ops_slowlog(graph: str = "company"):
         return await slowlog(st.db, st.name(graph))
 
-    @app.post("/demo/reset")
-    async def demo_reset():
+    async def reset_demo():
         """Back to 'before the event': rewind replay events, clear stale flags,
         wipe agent memories and the shared board (company data is untouched)."""
+        await st.init()
         for g in [*agent_graphs(st.db).values(), st.db.select_graph(st.name("shared"))]:
             if g.name in await st.db.list_graphs():
                 await g.delete()
@@ -405,6 +433,12 @@ def create_app(prefix: str = "lineage", llm_factory: Callable | None = None, emb
         company = st.db.select_graph(st.name("company"))
         for e in await events():
             await reset_event(company, [], e["slug"])
+
+    hooks["reset"] = reset_demo
+
+    @app.post("/demo/reset")
+    async def demo_reset():
+        await reset_demo()
         return {"reset": True}
 
     return app
