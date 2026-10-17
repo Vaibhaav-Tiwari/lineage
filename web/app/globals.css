@@ -81,11 +81,26 @@ a { color: var(--cyan); }
   border-bottom: 2px solid transparent; font-size: var(--step-1);
 }
 .views button[aria-pressed="true"] { color: var(--ink); border-bottom-color: var(--ink); }
+/* the theme switch: a small track whose thumb is the same brass as the time dial */
 .theme-toggle {
-  border: 0; background: none; padding: 0.3rem 0 0.3rem 0.5rem; cursor: pointer; color: var(--ink-soft); font-style: italic;
-  font-size: var(--step--1); text-decoration: underline; text-decoration-color: var(--rule); text-underline-offset: 3px;
+  display: inline-flex; align-items: center; gap: 0.45rem; align-self: baseline; margin-left: 0.4rem;
+  border: 0; background: none; padding: 0.2rem 0; cursor: pointer; color: var(--ink-soft); font-style: italic; font-size: var(--step--1);
 }
-.theme-toggle:hover { color: var(--ink); text-decoration-color: var(--ink-soft); }
+.theme-toggle:hover { color: var(--ink); }
+.theme-toggle-track {
+  position: relative; width: 34px; height: 18px; border-radius: 9px; border: 1px solid var(--ink-faint);
+  background: var(--paper-deep); transition: background-color 200ms ease, border-color 200ms ease;
+}
+.theme-toggle-thumb {
+  position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff6dc 0, var(--brass-light) 30%, #c49a48 70%, #7d5c22 100%);
+  box-shadow: 0 1px 2px var(--shadow-strong); transition: transform 200ms ease;
+}
+.theme-toggle[aria-checked="true"] .theme-toggle-track { background: var(--cyan-wash); border-color: var(--cyan); }
+.theme-toggle[aria-checked="true"] .theme-toggle-thumb { transform: translateX(16px); }
+.theme-toggle:focus-visible { outline: none; }
+.theme-toggle:focus-visible .theme-toggle-track { box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--cyan); }
+@media (prefers-reduced-motion: reduce) { .theme-toggle-track, .theme-toggle-thumb { transition: none; } }
 
 /* ---------- time rail: a ruler in one row (status | ruler | reset) ---------- */
 .rail {
