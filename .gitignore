@@ -11,5 +11,5 @@ web/.next/
 web/node_modules/
 web/next-env.d.ts
 
-# the hosted demo's graph snapshot: uploaded with `railway up --no-gitignore`, never committed
+# a local graph snapshot, if one is made for deploying: never committed (it holds forum text)
 deploy/falkordb/dump.rdb

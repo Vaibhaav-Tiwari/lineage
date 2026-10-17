@@ -73,3 +73,12 @@ async def test_seed_builds_the_graph_only_when_it_is_missing(db):
     assert await seed_if_empty(db, name, pipeline=fake_pipeline) == "present"
     assert len(runs) == 1
     await db.select_graph(name).delete()
+
+
+async def test_without_the_raw_cache_a_missing_graph_is_reported_not_rebuilt(db, tmp_path):
+    name = f"test:{uuid.uuid4().hex[:8]}"
+
+    async def must_not_run(*a, **kw):
+        raise AssertionError("pipeline ran without a raw cache")
+
+    assert await seed_if_empty(db, name, pipeline=must_not_run, data_dir=str(tmp_path / "absent")) == "missing"

@@ -29,9 +29,10 @@ forks, UDFs, constraints and graph algorithms.
 
 ## Live demo and video
 
-- **Live demo:** to be added before submission. The public deployment runs the **graph-only** Historian (answers
-  composed straight from the evidence graph, no LLM), because a personal Claude subscription cannot power a public
-  site. Everything else is identical. Run it locally (below) for the Claude-powered Historian.
+- **Live demo:** **https://web-production-662e.up.railway.app** (on Railway; how it's deployed: [docs/deploy.md](docs/deploy.md)).
+  It runs the **graph-only** Historian (answers composed straight from the evidence graph, no LLM), because a
+  personal Claude subscription cannot power a public site. Everything else is identical. Every visitor shares one
+  demo, which resets every hour (or press **Reset demo**). Run it locally (below) for the Claude-powered Historian.
 - **Demo video:** to be added before submission.
 
 **The story to try** (works in graph-only mode too):

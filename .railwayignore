@@ -1,0 +1,9 @@
+# what `railway up` leaves out when deploying the API from the repo root (it already skips .gitignore'd paths)
+data/
+docs/
+eval/
+scripts/
+tests/
+web/
+deploy/
+.superpowers/

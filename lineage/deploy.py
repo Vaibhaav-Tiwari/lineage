@@ -3,7 +3,8 @@
     python -m lineage.deploy            (reads FALKOR_HOST / FALKOR_PASSWORD / PORT from the environment)
 
 The graph is rebuilt from the raw cache committed in data/raw, with no network, so a fresh database volume
-gets exactly the data the repo describes. A volume that already holds the graph is left alone.
+gets exactly the data the repo describes. The hosted images ship the graph inside the database instead, with no
+raw cache, so there a missing graph is reported, not rebuilt.
 """
 
 import asyncio
@@ -16,6 +17,8 @@ async def seed_if_empty(db, name: str = "lineage:company", pipeline=None, data_d
                         config_dir: str = "config") -> str:
     if name in await db.list_graphs() and (await ro(db.select_graph(name), "MATCH (n) RETURN count(n) AS n"))[0]["n"]:
         return "present"
+    if not os.path.isdir(data_dir):  # the hosted image ships the graph in the database, not the raw cache
+        return "missing"
     if pipeline is None:
         from lineage.ingest.run import run_pipeline as pipeline
     await pipeline(db.select_graph(name), data_dir, config_dir, offline=True, rewind=True, quiet=False)
