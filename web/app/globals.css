@@ -554,3 +554,16 @@ sup.fn button:hover { text-decoration: underline; }
 .judges-table td:last-child { white-space: nowrap; color: var(--ink-soft); }
 .judges-links { list-style: none; padding-left: 0 !important; }
 @media (max-width: 900px) { .judges-grid { grid-template-columns: 1fr; } .judges-tour { position: static; } }
+
+/* "found while building": the upstream reports, set apart as the part of the story worth lingering on */
+.judges-found { border-left: 3px solid var(--brass); padding: 0.2rem 0 0.2rem 1.1rem; }
+.judges-found-lede { margin: 0 0 1rem; line-height: 1.5; max-width: 66ch; }
+.finding-list { list-style: none; margin: 0; padding: 0 !important; display: grid; gap: 0.75rem; }
+.finding { background: var(--card); border: 1px solid var(--rule); padding: 0.7rem 0.9rem 0.75rem; display: grid; gap: 0.25rem; justify-items: start; }
+.finding-what { margin: 0; color: var(--ink); line-height: 1.45; }
+.finding-how { margin: 0; color: var(--ink-soft); font-size: var(--step--1); font-style: italic; line-height: 1.45; }
+.finding a { font-size: var(--step--1); font-family: var(--typed); }
+.finding-tag { font-family: var(--typed); font-size: 0.72rem; padding: 0 0.4rem; border: 1px solid currentColor; }
+.finding-tag.new { color: var(--stamp); }
+.finding-tag.added { color: var(--cyan); }
+.finding-tag.review { color: var(--pine); }

@@ -109,15 +109,39 @@ export default function JudgesView({ events, applying, onAsk, onApply, onReset, 
             </ul>
           </section>
 
-          <section aria-labelledby="upstream-h">
-            <h3 id="upstream-h">Given back to FalkorDB</h3>
-            <ul>
-              <li><a href="https://github.com/FalkorDB/FalkorDB/issues/3356" target="_blank" rel="noreferrer">#3356</a>: the documented read-only ACL refuses reads; selectors work.</li>
-              <li><a href="https://github.com/FalkorDB/FalkorDB/issues/3357" target="_blank" rel="noreferrer">#3357</a>: replacing a UDF library isn&rsquo;t atomic.</li>
-              <li><a href="https://github.com/FalkorDB/FalkorDB/issues/3150#issuecomment-6215167947" target="_blank" rel="noreferrer">Data points on #3150</a>, a server crash we hit twice.</li>
-              <li><a href="https://github.com/FalkorDB/docs/pull/456#issuecomment-6216303368" target="_blank" rel="noreferrer">Review on docs#456</a>: a &ldquo;read-only&rdquo; example that can still write.</li>
-            </ul>
-            <p className="judges-note">Each comes with a script that reproduces it in a throwaway container.</p>
+          <section className="judges-found" aria-labelledby="upstream-h">
+            <h3 id="upstream-h">Found while building Lineage</h3>
+            <p className="judges-found-lede">
+              Building on FalkorDB 6.0.2 turned up two bugs nobody had reported yet. We reported both upstream, added
+              what we learned to an existing crash report, and reviewed a docs change. Each report comes with a script
+              that reproduces it in a throwaway container.
+            </p>
+            <ol className="finding-list">
+              <li className="finding">
+                <span className="finding-tag new">New issue</span>
+                <p className="finding-what">The documented way to give a user read-only access to a graph refuses even reads.</p>
+                <p className="finding-how">Hit while setting up, giving each agent read-only access to the company graph. ACL selectors work instead, and that is what Lineage uses.</p>
+                <a href="https://github.com/FalkorDB/FalkorDB/issues/3356" target="_blank" rel="noreferrer">FalkorDB#3356</a>
+              </li>
+              <li className="finding">
+                <span className="finding-tag new">New issue</span>
+                <p className="finding-what">Replacing a JavaScript function library isn&rsquo;t atomic: a query that lands mid-reload fails with &ldquo;Unknown function&rdquo;.</p>
+                <p className="finding-how">Found while stress-testing reloads during the crash hunt below. Lineage now reloads only when the code changed.</p>
+                <a href="https://github.com/FalkorDB/FalkorDB/issues/3357" target="_blank" rel="noreferrer">FalkorDB#3357</a>
+              </li>
+              <li className="finding">
+                <span className="finding-tag added">Added to an existing issue</span>
+                <p className="finding-what">One ordinary read query, grouped a certain way, takes the whole server down.</p>
+                <p className="finding-how">It crashed our server twice while benchmarking. It was already reported, so we added a minimal reproduction and which query shapes do and don&rsquo;t trigger it.</p>
+                <a href="https://github.com/FalkorDB/FalkorDB/issues/3150#issuecomment-6215167947" target="_blank" rel="noreferrer">Our comment on FalkorDB#3150</a>
+              </li>
+              <li className="finding">
+                <span className="finding-tag review">Docs review</span>
+                <p className="finding-what">A new &ldquo;read-only&rdquo; example in the docs can still write, because profiling a query runs it.</p>
+                <p className="finding-how">Spotted while testing that pull request&rsquo;s examples: the user could create and delete data.</p>
+                <a href="https://github.com/FalkorDB/docs/pull/456#issuecomment-6216303368" target="_blank" rel="noreferrer">Our review on docs#456</a>
+              </li>
+            </ol>
           </section>
 
           <section aria-labelledby="limits-h">
