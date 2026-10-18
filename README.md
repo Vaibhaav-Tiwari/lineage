@@ -36,6 +36,8 @@ forks, UDFs, constraints and graph algorithms.
   It runs the **graph-only** Historian (answers composed straight from the evidence graph, no LLM), because a
   personal Claude subscription cannot power a public site. Everything else is identical. Every visitor shares one
   demo, which resets every hour (or press **Reset demo**). Run it locally (below) for the Claude-powered Historian.
+- **If the live site is down or slow:** [run it yourself](#setup-run-it-yourself). It needs Docker, uv and Node, no accounts
+  or API keys; allow up to an hour the first time, mostly for building the graph.
 - **Demo video:** [YouTube Demo](https://youtu.be/IxckW9yMvjA)
 
 ![Applying the real PEP 563 change: the earlier answer is struck through and the queued action is refused](docs/assets/pep-563-unlearning.gif)
@@ -295,20 +297,66 @@ touches FalkorDB runs on its own throwaway graph.
 
 ---
 
-## Setup
+## Setup: run it yourself
 
-Requires Docker, [uv](https://docs.astral.sh/uv/) and Node 20+.
+Everything runs locally from the repo: the graph is rebuilt from the raw data committed in `data/raw/`, so you need no
+network access to the sources, no accounts and no API keys. The default mode is **graph-only**, the same as the live
+demo. Allow up to an hour the first time: building the graph embeds about 24,600 passages and posts on your CPU
+(a fresh clone took 52 minutes on a MacBook Air, and produced exactly the counts below).
+
+**You need:** [Docker](https://docs.docker.com/get-docker/), [uv](https://docs.astral.sh/uv/) (it installs Python
+3.12 for you) and Node 20+. Ports 6379, 3000, 8000 and 3001 should be free.
+
+**1. Get the code and start FalkorDB**
 
 ```bash
 git clone https://github.com/Vaibhaav-Tiwari/lineage && cd lineage
 docker volume create lineage-falkordb-data
-docker compose up -d                                # FalkorDB 6.0.2 (pinned) on :6379, Browser on :3000
-uv sync
-cp .env.example .env                                # LLM_BACKEND=claude-code | graph-only | anthropic
-uv run python -m lineage.ingest.run --offline --rewind-replays   # build the graph from the committed raw cache
-uv run uvicorn lineage.api.main:app --port 8000
-npm --prefix web install && npm --prefix web run dev -- -p 3001  # UI on http://localhost:3001
+docker compose up -d          # FalkorDB 6.0.2 on :6379, its Browser on http://localhost:3000
 ```
+
+**2. Install and configure**
+
+```bash
+uv sync
+cp .env.example .env          # graph-only by default: no AI account needed
+```
+
+**3. Build the graph** (offline; the first run also downloads the 130 MB embedding model)
+
+```bash
+uv run python -m lineage.ingest.run --offline --rewind-replays
+```
+
+Check it worked: this should print `27959`.
+
+```bash
+docker exec lineage-falkordb redis-cli GRAPH.RO_QUERY lineage:company "MATCH (n) RETURN count(n)"
+```
+
+**4. Start the API and the web app**, each in its own terminal
+
+```bash
+uv run uvicorn lineage.api.main:app --port 8000
+```
+
+```bash
+npm --prefix web install && npm --prefix web run dev -- -p 3001
+```
+
+Open **http://localhost:3001/#judges** for the guided tour.
+
+**If something goes wrong**
+
+- *"API offline" in the footer:* the API in step 4 isn't running, or is on another port. If you moved it, start the
+  web app with `NEXT_PUBLIC_API_URL=http://localhost:<port>` in front of the command.
+- *A port is already in use:* pick another for the web app (`-p 3002`) or the API (`--port 8001`, plus the variable
+  above). For FalkorDB, change the `6379` mapping in `docker-compose.yml` and `FALKOR_PORT` in `.env`.
+- *Answers written by Claude instead of graph-only:* set `LLM_BACKEND=claude-code` in `.env` if you're logged in to
+  Claude Code, or `LLM_BACKEND=anthropic` with `ANTHROPIC_API_KEY`, then restart the API.
+- *Start over:* `docker compose down`, `docker volume rm lineage-falkordb-data`, then repeat from step 1.
+
+**More**
 
 - `--offline` rebuilds from `data/raw/` with no network. Drop it to refresh from the live sources; a GitHub token is
   needed for CPython data (`GITHUB_TOKEN=$(gh auth token)`).
