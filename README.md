@@ -1,5 +1,7 @@
 # Lineage
 
+![Lineage: the real neighbourhood of PEP 563 in the company graph](docs/assets/banner-5x2.png)
+
 **A company brain that remembers *why* it believes something, and un-learns when the truth changes.**
 
 Lineage turns an organisation's record into a FalkorDB graph of people, proposals, decisions, discussions and code,
@@ -36,7 +38,12 @@ forks, UDFs, constraints and graph algorithms.
   demo, which resets every hour (or press **Reset demo**). Run it locally (below) for the Claude-powered Historian.
 - **Demo video:** to be added before submission.
 
-**The story to try** (works in graph-only mode too):
+![Applying the real PEP 563 change: the earlier answer is struck through and the queued action is refused](docs/assets/pep-563-unlearning.gif)
+
+*The un-learning moment, recorded on the live site: ask about PEP 563, publish the answer to the FAQ, apply the real
+change, and the answer is struck through while the queued action is refused with its chain of evidence.*
+
+**The story to try** (works in graph-only mode too; the **For Judges** tab has buttons for each step):
 
 1. Ask *"Who decided PEP 563?"* The answer has footnotes; **Replay how this was found** lights up each step on the graph.
 2. Queue **Publish to the onboarding FAQ** and run it. The gate lets it through and the entry appears in Memory.
@@ -47,9 +54,19 @@ forks, UDFs, constraints and graph algorithms.
 5. Organisation: drag the brass dial back to 2018 and see who held asyncio and typing then. Try **Find an introduction**
    and a what-if (**a person left**, **a proposal were reversed**), then **Show on the graph**.
 
+| Ask: a footnoted answer and its evidence graph | For Judges: a two-minute guided tour |
+|---|---|
+| ![The Ask view](docs/assets/ask-view.png) | ![The For Judges tab](docs/assets/for-judges.png) |
+
+The UI follows the system's light or dark setting; the switch in the header overrides it.
+
 ---
 
 ## How it works
+
+![Architecture: sources, ingestion, one FalkorDB server with a graph per concern, two agents with their own logins, the API, web app and MCP server](docs/assets/architecture.png)
+
+<details><summary>The same architecture as a Mermaid diagram, with the data flows labelled</summary>
 
 ```mermaid
 flowchart LR
@@ -80,6 +97,8 @@ flowchart LR
   WEB[Next.js UI] --> API
 ```
 
+</details>
+
 **Key design decisions**
 
 | Decision | Why |
@@ -99,6 +118,11 @@ flowchart LR
 ## Graph data model
 
 `lineage:company` holds **27,959 nodes and 67,601 relationships**.
+
+![The graph data model: node and relationship types, the agent's memory chain, the user graph and the shared board](docs/assets/data-model.png)
+
+The diagrams are Excalidraw files you can open and edit: [architecture](docs/assets/architecture.excalidraw),
+[data model](docs/assets/data-model.excalidraw).
 
 | Node | Count | Example |
 |---|---|---|
@@ -266,7 +290,7 @@ Per-question results: [eval/results-graph-only.md](eval/results-graph-only.md),
 **Read this with care:** we wrote the 20 questions and the judge ourselves, on the data we built the graph from. 20/20
 shows the system works on these questions; it is not a measure of accuracy in general.
 
-**Tests:** 185 passing (`uv run pytest -m "not slow"`) plus 4 web tests (`npm --prefix web test`). Every test that
+**Tests:** 197 passing (`uv run pytest -m "not slow"`) plus 11 web tests (`npm --prefix web test`). Every test that
 touches FalkorDB runs on its own throwaway graph.
 
 ---
