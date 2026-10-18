@@ -36,7 +36,7 @@ forks, UDFs, constraints and graph algorithms.
   It runs the **graph-only** Historian (answers composed straight from the evidence graph, no LLM), because a
   personal Claude subscription cannot power a public site. Everything else is identical. Every visitor shares one
   demo, which resets every hour (or press **Reset demo**). Run it locally (below) for the Claude-powered Historian.
-- **Demo video:** to be added before submission.
+- **Demo video:** [YouTube Demo](https://youtu.be/IxckW9yMvjA)
 
 ![Applying the real PEP 563 change: the earlier answer is struck through and the queued action is refused](docs/assets/pep-563-unlearning.gif)
 
