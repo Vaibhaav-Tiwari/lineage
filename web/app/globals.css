@@ -526,3 +526,31 @@ sup.fn button:hover { text-decoration: underline; }
 .known-at { display: flex; gap: 0.6rem; align-items: baseline; margin: 0 0 0.7rem; font-size: var(--step--1); color: var(--ink-soft); }
 .known-at select { padding: 0.3rem 0.4rem; border: 1px solid var(--rule); background: var(--card); font: inherit; color: var(--ink); max-width: 100%; }
 .asof-note { margin: 0 0 1rem; padding: 0.5rem 0.75rem; border-left: 3px solid var(--brass); background: var(--card); font-size: var(--step--1); color: var(--ink-soft); }
+
+/* ---------- for judges: a reading-room guide ---------- */
+.judges { padding: 1.4rem 1.5rem 2.5rem; overflow: auto; }
+.judges-head { max-width: 70ch; margin-bottom: 1.6rem; }
+.judges-head h2 { font-family: var(--display); font-weight: 400; font-size: var(--step-3); margin: 0 0 0.4rem; }
+.judges-head p { margin: 0 0 0.5rem; font-size: var(--step-1); line-height: 1.5; }
+.judges-head .judges-tracks { font-size: var(--step--1); color: var(--ink-soft); font-style: italic; }
+.judges-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 2.5rem; align-items: start; }
+.judges h3 { font-family: var(--display); font-weight: 400; font-size: var(--step-2); margin: 0 0 0.6rem; }
+.judges-tour { position: sticky; top: 0; background: var(--card); border: 1px solid var(--rule); padding: 1.1rem 1.25rem 1.2rem; }
+.judges-tour ol { margin: 0; padding: 0; list-style: none; counter-reset: step; display: grid; gap: 0.9rem; }
+.judges-tour li { counter-increment: step; display: grid; grid-template-columns: 1.8rem 1fr; column-gap: 0.4rem; align-items: start; }
+.judges-tour li::before {
+  content: counter(step); grid-row: span 2; font-family: var(--display); font-size: var(--step-2); line-height: 1; color: var(--brass);
+}
+.judges-tour li p { margin: 0 0 0.45rem; line-height: 1.45; }
+.judges-tour li .btn { justify-self: start; grid-column: 2; }
+.judges-note { font-size: var(--step--1); color: var(--ink-soft); font-style: italic; margin: 0.9rem 0 0; }
+.judges-tour li .judges-note { margin: 0; grid-column: 2; }
+.judges-facts { display: grid; gap: 1.6rem; max-width: 78ch; }
+.judges-facts ul { margin: 0; padding-left: 1.1rem; display: grid; gap: 0.4rem; line-height: 1.45; }
+.judges-table { width: 100%; border-collapse: collapse; font-size: var(--step--1); }
+.judges-table th { text-align: left; font-weight: 400; font-style: italic; color: var(--ink-soft); border-bottom: 1px solid var(--ink); padding: 0.3rem 0.6rem 0.3rem 0; }
+.judges-table td { border-bottom: 1px solid var(--rule); padding: 0.4rem 0.6rem 0.4rem 0; vertical-align: top; line-height: 1.4; }
+.judges-table td:first-child { color: var(--ink); width: 34%; }
+.judges-table td:last-child { white-space: nowrap; color: var(--ink-soft); }
+.judges-links { list-style: none; padding-left: 0 !important; }
+@media (max-width: 900px) { .judges-grid { grid-template-columns: 1fr; } .judges-tour { position: static; } }

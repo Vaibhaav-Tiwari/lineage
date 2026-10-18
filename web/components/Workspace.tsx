@@ -11,6 +11,7 @@ import Tip from "./Tip";
 import ThemeToggle from "./ThemeToggle";
 import OrgView from "./OrgView";
 import MemoryView from "./MemoryView";
+import JudgesView from "./JudgesView";
 import type { Replay, Wave } from "./EvidenceGraph";
 
 const EvidenceGraph = dynamic(() => import("./EvidenceGraph"), { ssr: false });
@@ -52,7 +53,13 @@ const SUGGESTIONS = [
 ];
 
 export default function Workspace() {
-  const [view, setView] = useState<"ask" | "org" | "memory">("ask");
+  const [view, setView] = useState<"ask" | "org" | "memory" | "judges">("ask");
+  // a link ending in #judges opens the judges' guide directly (for the hackathon submission)
+  useEffect(() => { if (window.location.hash === "#judges") setView("judges"); }, []);
+  useEffect(() => {
+    const want = view === "judges" ? "#judges" : "";
+    if (window.location.hash !== want) history.replaceState(null, "", want || window.location.pathname + window.location.search);
+  }, [view]);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [question, setQuestion] = useState("");
   const [busy, setBusy] = useState(false);
@@ -305,8 +312,8 @@ export default function Workspace() {
         <h1>Lineage</h1>
         <span className="motto">The company brain that remembers why, and un-learns when the truth changes.</span>
         <nav className="views" aria-label="Views">
-          {(["ask", "org", "memory"] as const).map((v) => (
-            <button key={v} aria-pressed={view === v} onClick={() => setView(v)}>{v === "ask" ? "Ask" : v === "org" ? "Organisation" : "Memory"}</button>
+          {(["ask", "org", "memory", "judges"] as const).map((v) => (
+            <button key={v} aria-pressed={view === v} onClick={() => setView(v)}>{{ ask: "Ask", org: "Organisation", memory: "Memory", judges: "For Judges" }[v]}</button>
           ))}
         </nav>
         <ThemeToggle />
@@ -450,6 +457,10 @@ export default function Workspace() {
       )}
       {view === "org" && <OrgView onShowGraph={showPreview} asOf={asOf} />}
       {view === "memory" && <MemoryView uid={UID} />}
+      {view === "judges" && (
+        <JudgesView events={events} applying={applying} onReset={reset} onOpen={setView} onApply={apply}
+                    onAsk={(q) => { setView("ask"); ask(q); }} />
+      )}
 
       <footer className="strip">
         <span><span className={`dot ${online ? "" : "off"}`} />{online ? "Historian and Steward online" : SHARED_DEMO ? "API offline — try again in a minute" : "API offline — start it with uvicorn"}</span>
